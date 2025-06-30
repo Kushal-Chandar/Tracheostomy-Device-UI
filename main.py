@@ -2,61 +2,62 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
-from kivy.graphics import Color, Rectangle, Line, Ellipse
+from kivy.uix.button import Button
+from kivy.graphics import Color, Rectangle, Line, Ellipse, RoundedRectangle
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
-from kivy.uix.button import Button
 import math
 import random
 
 class ResponsiveComponent(BoxLayout):
-    """Base class for responsive components"""
-    def __init__(self, title="Component", bg_color=(0.15, 0.15, 0.15, 1), **kwargs):
+    """Base class for responsive medical components"""
+    def __init__(self, title="Component", bg_color=(0.15, 0.15, 0.15, 1), 
+                 icon_color=(1, 1, 1, 1), **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
-        self.spacing = dp(10)
-        self.padding = [dp(15), dp(10), dp(15), dp(10)]
+        self.spacing = dp(15)
+        self.padding = [dp(20), dp(15), dp(20), dp(15)]
         self.title = title
         self.bg_color = bg_color
+        self.icon_color = icon_color
         
-        # Create background
+        # Create rounded background
         with self.canvas.before:
             Color(*self.bg_color)
-            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-            
-            # Border
-            Color(0.3, 0.3, 0.3, 1)
-            self.border = Line(rectangle=(self.x, self.y, self.width, self.height), width=1)
+            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(8)])
             
         self.bind(pos=self.update_bg, size=self.update_bg)
         
     def update_bg(self, *args):
         self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
-        self.border.rectangle = (self.x, self.y, self.width, self.height)
 
 class RespiratoryComponent(ResponsiveComponent):
     """Respiratory Rate Component"""
     def __init__(self, **kwargs):
-        super().__init__(title="Respiratory Rate", bg_color=(0.1, 0.15, 0.2, 1), **kwargs)
+        super().__init__(title="Respiratory Rate (RR)", 
+                        bg_color=(0.08, 0.12, 0.16, 1), 
+                        icon_color=(0.4, 0.8, 1, 1), **kwargs)
         
-        # Left side - Value display
-        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.3)
+        # Left side - Icon and title
+        left_layout = BoxLayout(orientation='vertical', size_hint_x=0.25, spacing=dp(5))
         
-        # Icon placeholder
-        icon_widget = Widget(size_hint_y=0.4)
-        with icon_widget.canvas:
-            Color(0.3, 0.7, 1, 1)  # Light blue
-            self.icon_circle = Ellipse(size=(dp(40), dp(40)))
-        icon_widget.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
+        # Icon widget
+        icon_container = Widget(size_hint_y=0.4)
+        with icon_container.canvas:
+            Color(*self.icon_color)
+            # Lungs icon representation
+            self.icon_ellipse1 = Ellipse(size=(dp(15), dp(25)))
+            self.icon_ellipse2 = Ellipse(size=(dp(15), dp(25)))
+        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
         
         # Title
         title_label = Label(
-            text='RESPIRATORY\nRATE',
-            font_size=sp(12),
+            text='Respiratory Rate (RR):',
+            font_size=sp(11),
             color=(0.7, 0.7, 0.7, 1),
-            halign='center',
-            valign='center',
+            halign='left',
+            valign='bottom',
             size_hint_y=0.3
         )
         title_label.bind(size=title_label.setter('text_size'))
@@ -64,23 +65,41 @@ class RespiratoryComponent(ResponsiveComponent):
         # Value
         self.value_label = Label(
             text='24',
-            font_size=sp(36),
+            font_size=sp(48),
             color=(1, 1, 1, 1),
             bold=True,
-            size_hint_y=0.3
+            halign='left',
+            size_hint_y=0.6
         )
+        self.value_label.bind(size=self.value_label.setter('text_size'))
         
-        value_layout.add_widget(icon_widget)
-        value_layout.add_widget(title_label)
+        # Unit
+        unit_label = Label(
+            text='bpm',
+            font_size=sp(12),
+            color=(0.5, 0.5, 0.5, 1),
+            halign='left',
+            valign='top',
+            size_hint_y=0.2
+        )
+        unit_label.bind(size=unit_label.setter('text_size'))
+        
+        left_layout.add_widget(icon_container)
+        left_layout.add_widget(title_label)
+        
+        # Value section
+        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.2)
         value_layout.add_widget(self.value_label)
+        value_layout.add_widget(unit_label)
         
         # Right side - Graph
-        self.graph_widget = Widget()
+        self.graph_widget = Widget(size_hint_x=0.55)
         with self.graph_widget.canvas:
-            Color(0.3, 0.7, 1, 0.8)
+            Color(*self.icon_color, 0.8)
             self.graph_line = Line(width=2)
         self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
         
+        self.add_widget(left_layout)
         self.add_widget(value_layout)
         self.add_widget(self.graph_widget)
         
@@ -88,9 +107,10 @@ class RespiratoryComponent(ResponsiveComponent):
         Clock.schedule_interval(self.update_data, 0.1)
         
     def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2 - dp(20)
-        center_y = widget.y + widget.height / 2 - dp(20)
-        self.icon_circle.pos = (center_x, center_y)
+        center_x = widget.x + widget.width / 2
+        center_y = widget.y + widget.height / 2
+        self.icon_ellipse1.pos = (center_x - dp(20), center_y - dp(12))
+        self.icon_ellipse2.pos = (center_x + dp(5), center_y - dp(12))
         
     def update_graph(self, *args):
         if self.graph_widget.width < 100:
@@ -98,42 +118,43 @@ class RespiratoryComponent(ResponsiveComponent):
             
         # Generate sine wave for respiratory pattern
         points = []
-        for i in range(0, int(self.graph_widget.width - dp(20)), 4):
+        for i in range(0, int(self.graph_widget.width - dp(20)), 3):
             x = self.graph_widget.x + dp(10) + i
             y = (self.graph_widget.y + self.graph_widget.height/2 + 
-                 math.sin(i * 0.02) * self.graph_widget.height/4)
+                 math.sin(i * 0.015) * self.graph_widget.height/3)
             points.extend([x, y])
             
         if len(points) > 2:
             self.graph_line.points = points
             
     def update_data(self, dt):
-        # Simulate changing respiratory rate
         new_value = 22 + random.randint(-2, 4)
         self.value_label.text = str(new_value)
 
 class CO2Component(ResponsiveComponent):
     """CO2 Level Component"""
     def __init__(self, **kwargs):
-        super().__init__(title="CO2 Level", bg_color=(0.15, 0.2, 0.1, 1), **kwargs)
+        super().__init__(title="ETCO2", 
+                        bg_color=(0.08, 0.12, 0.16, 1), 
+                        icon_color=(0.3, 1, 0.5, 1), **kwargs)
         
-        # Left side - Value display
-        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.3)
+        # Left side - Icon and title
+        left_layout = BoxLayout(orientation='vertical', size_hint_x=0.25, spacing=dp(5))
         
-        # Icon placeholder
-        icon_widget = Widget(size_hint_y=0.4)
-        with icon_widget.canvas:
-            Color(0.5, 1, 0.3, 1)  # Light green
-            self.icon_rect = Rectangle(size=(dp(40), dp(30)))
-        icon_widget.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
+        # Icon widget
+        icon_container = Widget(size_hint_y=0.4)
+        with icon_container.canvas:
+            Color(*self.icon_color)
+            self.co2_text = Rectangle(size=(dp(35), dp(20)))
+        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
         
         # Title
         title_label = Label(
-            text='ETCO2\nLEVEL',
-            font_size=sp(12),
+            text='ETCO2:',
+            font_size=sp(11),
             color=(0.7, 0.7, 0.7, 1),
-            halign='center',
-            valign='center',
+            halign='left',
+            valign='bottom',
             size_hint_y=0.3
         )
         title_label.bind(size=title_label.setter('text_size'))
@@ -141,38 +162,56 @@ class CO2Component(ResponsiveComponent):
         # Value
         self.value_label = Label(
             text='42',
-            font_size=sp(36),
+            font_size=sp(48),
             color=(1, 1, 1, 1),
             bold=True,
-            size_hint_y=0.3
+            halign='left',
+            size_hint_y=0.6
         )
+        self.value_label.bind(size=self.value_label.setter('text_size'))
         
-        value_layout.add_widget(icon_widget)
-        value_layout.add_widget(title_label)
+        # Unit
+        unit_label = Label(
+            text='mmHg',
+            font_size=sp(12),
+            color=(0.5, 0.5, 0.5, 1),
+            halign='left',
+            valign='top',
+            size_hint_y=0.2
+        )
+        unit_label.bind(size=unit_label.setter('text_size'))
+        
+        left_layout.add_widget(icon_container)
+        left_layout.add_widget(title_label)
+        
+        # Value section
+        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.2)
         value_layout.add_widget(self.value_label)
+        value_layout.add_widget(unit_label)
         
         # Right side - Graph (square wave pattern)
-        self.graph_widget = Widget()
+        self.graph_widget = Widget(size_hint_x=0.55)
         with self.graph_widget.canvas:
-            Color(0.5, 1, 0.3, 0.8)
+            Color(*self.icon_color, 0.8)
             self.graph_line = Line(width=2)
         self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
         
+        self.add_widget(left_layout)
         self.add_widget(value_layout)
         self.add_widget(self.graph_widget)
         
         Clock.schedule_interval(self.update_data, 0.2)
         
     def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2 - dp(20)
-        center_y = widget.y + widget.height / 2 - dp(15)
-        self.icon_rect.pos = (center_x, center_y)
+        center_x = widget.x + widget.width / 2 - dp(17)
+        center_y = widget.y + widget.height / 2 - dp(10)
+        self.co2_text.pos = (center_x, center_y)
         
     def update_graph(self, *args):
         if self.graph_widget.width < 100:
             return
             
-        # Generate square wave pattern
+        # Generate square wave pattern for CO2
         points = []
         segment_width = (self.graph_widget.width - dp(20)) / 6
         base_y = self.graph_widget.y + self.graph_widget.height * 0.3
@@ -197,57 +236,77 @@ class CO2Component(ResponsiveComponent):
 class SpO2Component(ResponsiveComponent):
     """SpO2 Component"""
     def __init__(self, **kwargs):
-        super().__init__(title="SpO2", bg_color=(0.2, 0.1, 0.15, 1), **kwargs)
+        super().__init__(title="SPO2", 
+                        bg_color=(0.08, 0.12, 0.16, 1), 
+                        icon_color=(0.9, 0.4, 0.9, 1), **kwargs)
         
-        # Left side - Value display
-        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.3)
+        # Left side - Icon and title
+        left_layout = BoxLayout(orientation='vertical', size_hint_x=0.25, spacing=dp(5))
         
-        # Icon placeholder
-        icon_widget = Widget(size_hint_y=0.4)
-        with icon_widget.canvas:
-            Color(1, 0.4, 0.4, 1)  # Light red
-            self.icon_circle = Ellipse(size=(dp(35), dp(35)))
-        icon_widget.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
+        # Icon widget
+        icon_container = Widget(size_hint_y=0.4)
+        with icon_container.canvas:
+            Color(*self.icon_color)
+            self.icon_circle = Ellipse(size=(dp(30), dp(30)))
+        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
         
         # Title
         title_label = Label(
-            text='SPO2\nSATURATION',
-            font_size=sp(12),
+            text='SPO2:',
+            font_size=sp(11),
             color=(0.7, 0.7, 0.7, 1),
-            halign='center',
-            valign='center',
+            halign='left',
+            valign='bottom',
             size_hint_y=0.3
         )
         title_label.bind(size=title_label.setter('text_size'))
         
         # Value with percentage
         self.value_label = Label(
-            text='92%',
-            font_size=sp(36),
+            text='92',
+            font_size=sp(48),
             color=(1, 1, 1, 1),
             bold=True,
-            size_hint_y=0.3
+            halign='left',
+            size_hint_y=0.6
         )
+        self.value_label.bind(size=self.value_label.setter('text_size'))
         
-        value_layout.add_widget(icon_widget)
-        value_layout.add_widget(title_label)
+        # Unit
+        unit_label = Label(
+            text='%',
+            font_size=sp(12),
+            color=(0.5, 0.5, 0.5, 1),
+            halign='left',
+            valign='top',
+            size_hint_y=0.2
+        )
+        unit_label.bind(size=unit_label.setter('text_size'))
+        
+        left_layout.add_widget(icon_container)
+        left_layout.add_widget(title_label)
+        
+        # Value section
+        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.2)
         value_layout.add_widget(self.value_label)
+        value_layout.add_widget(unit_label)
         
         # Right side - Pulse wave
-        self.graph_widget = Widget()
+        self.graph_widget = Widget(size_hint_x=0.55)
         with self.graph_widget.canvas:
-            Color(1, 0.4, 0.4, 0.8)
+            Color(*self.icon_color, 0.8)
             self.graph_line = Line(width=2)
         self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
         
+        self.add_widget(left_layout)
         self.add_widget(value_layout)
         self.add_widget(self.graph_widget)
         
         Clock.schedule_interval(self.update_data, 0.15)
         
     def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2 - dp(17.5)
-        center_y = widget.y + widget.height / 2 - dp(17.5)
+        center_x = widget.x + widget.width / 2 - dp(15)
+        center_y = widget.y + widget.height / 2 - dp(15)
         self.icon_circle.pos = (center_x, center_y)
         
     def update_graph(self, *args):
@@ -281,66 +340,86 @@ class SpO2Component(ResponsiveComponent):
             
     def update_data(self, dt):
         new_value = 90 + random.randint(-2, 5)
-        self.value_label.text = f'{new_value}%'
+        self.value_label.text = str(new_value)
 
 class HeartRateComponent(ResponsiveComponent):
     """Heart Rate Component"""
     def __init__(self, **kwargs):
-        super().__init__(title="Heart Rate", bg_color=(0.2, 0.15, 0.1, 1), **kwargs)
+        super().__init__(title="Heart Rate", 
+                        bg_color=(0.08, 0.12, 0.16, 1), 
+                        icon_color=(0.3, 1, 0.3, 1), **kwargs)
         
-        # Left side - Value display
-        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.3)
+        # Left side - Icon and title
+        left_layout = BoxLayout(orientation='vertical', size_hint_x=0.25, spacing=dp(5))
         
-        # Icon placeholder (heart shape approximation)
-        icon_widget = Widget(size_hint_y=0.4)
-        with icon_widget.canvas:
-            Color(1, 0.6, 0.2, 1)  # Orange
-            self.icon_heart = Ellipse(size=(dp(25), dp(25)))
-            self.icon_heart2 = Ellipse(size=(dp(25), dp(25)))
-        icon_widget.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
+        # Icon widget (heart shape)
+        icon_container = Widget(size_hint_y=0.4)
+        with icon_container.canvas:
+            Color(*self.icon_color)
+            self.icon_heart = Ellipse(size=(dp(20), dp(20)))
+            self.icon_heart2 = Ellipse(size=(dp(20), dp(20)))
+        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
         
         # Title
         title_label = Label(
-            text='HEART\nRATE',
-            font_size=sp(12),
+            text='Heart rate (HR):',
+            font_size=sp(11),
             color=(0.7, 0.7, 0.7, 1),
-            halign='center',
-            valign='center',
+            halign='left',
+            valign='bottom',
             size_hint_y=0.3
         )
         title_label.bind(size=title_label.setter('text_size'))
         
-        # Value with BPM
+        # Value
         self.value_label = Label(
             text='98',
-            font_size=sp(36),
+            font_size=sp(48),
             color=(1, 1, 1, 1),
             bold=True,
-            size_hint_y=0.3
+            halign='left',
+            size_hint_y=0.6
         )
+        self.value_label.bind(size=self.value_label.setter('text_size'))
         
-        value_layout.add_widget(icon_widget)
-        value_layout.add_widget(title_label)
+        # Unit
+        unit_label = Label(
+            text='bpm',
+            font_size=sp(12),
+            color=(0.5, 0.5, 0.5, 1),
+            halign='left',
+            valign='top',
+            size_hint_y=0.2
+        )
+        unit_label.bind(size=unit_label.setter('text_size'))
+        
+        left_layout.add_widget(icon_container)
+        left_layout.add_widget(title_label)
+        
+        # Value section
+        value_layout = BoxLayout(orientation='vertical', size_hint_x=0.2)
         value_layout.add_widget(self.value_label)
+        value_layout.add_widget(unit_label)
         
         # Right side - ECG pattern
-        self.graph_widget = Widget()
+        self.graph_widget = Widget(size_hint_x=0.55)
         with self.graph_widget.canvas:
-            Color(1, 0.6, 0.2, 0.8)
+            Color(*self.icon_color, 0.8)
             self.graph_line = Line(width=2)
         self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
         
+        self.add_widget(left_layout)
         self.add_widget(value_layout)
         self.add_widget(self.graph_widget)
         
-        Clock.schedule_interval(self.update_data, 0.6)  # Slower for heart rate
+        Clock.schedule_interval(self.update_data, 0.6)
         
     def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2 - dp(12.5)
-        center_y = widget.y + widget.height / 2 - dp(12.5)
+        center_x = widget.x + widget.width / 2 - dp(10)
+        center_y = widget.y + widget.height / 2 - dp(10)
         # Simple heart shape with two circles
-        self.icon_heart.pos = (center_x - dp(8), center_y + dp(5))
-        self.icon_heart2.pos = (center_x + dp(8), center_y + dp(5))
+        self.icon_heart.pos = (center_x - dp(8), center_y + dp(3))
+        self.icon_heart2.pos = (center_x + dp(8), center_y + dp(3))
         
     def update_graph(self, *args):
         if self.graph_widget.width < 100:
@@ -356,9 +435,9 @@ class HeartRateComponent(ResponsiveComponent):
             
             # ECG pattern: P-QRS-T
             beat_points = [
-                (0, 0), (0.1, 0.2), (0.2, 0), (0.3, 0),  # P wave
-                (0.35, -0.3), (0.4, 1), (0.45, -0.5), (0.5, 0),  # QRS complex
-                (0.6, 0), (0.7, 0.3), (0.8, 0), (1, 0)  # T wave
+                (0, 0), (0.1, 0.2), (0.2, 0), (0.3, 0),
+                (0.35, -0.3), (0.4, 1), (0.45, -0.5), (0.5, 0),
+                (0.6, 0), (0.7, 0.3), (0.8, 0), (1, 0)
             ]
             
             for j, (x_ratio, y_ratio) in enumerate(beat_points):
@@ -373,24 +452,123 @@ class HeartRateComponent(ResponsiveComponent):
         new_value = 95 + random.randint(-5, 8)
         self.value_label.text = str(new_value)
 
+class AlertButton(Button):
+    """Custom alert button with proper styling"""
+    def __init__(self, alert_type="warning", **kwargs):
+        super().__init__(**kwargs)
+        self.alert_type = alert_type
+        self.size_hint_y = None
+        self.height = dp(60)
+        
+        # Remove default button styling
+        self.background_color = (0, 0, 0, 0)
+        
+        # Colors based on alert type
+        colors = {
+            "critical": (0.9, 0.1, 0.1, 1),
+            "warning": (1, 0.5, 0.1, 1),
+            "normal": (0.3, 0.3, 0.3, 1),
+            "info": (0.2, 0.6, 0.9, 1)
+        }
+        
+        self.alert_color = colors.get(alert_type, colors["normal"])
+        
+        with self.canvas.before:
+            Color(*self.alert_color)
+            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(8)])
+            
+        self.bind(pos=self.update_bg, size=self.update_bg)
+        
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
+class SidebarPanel(BoxLayout):
+    """Right sidebar with alert buttons"""
+    def __init__(self, **kwargs):
+        super().__init__(orientation='vertical', size_hint_x=None, width=dp(120), 
+                        spacing=dp(10), padding=dp(10), **kwargs)
+        
+        # Background
+        with self.canvas.before:
+            Color(0.05, 0.05, 0.05, 1)
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+            
+        self.bind(pos=self.update_bg, size=self.update_bg)
+        
+        # Critical Alert
+        critical_btn = AlertButton(
+            text="!",
+            font_size=sp(24),
+            color=(1, 1, 1, 1),
+            alert_type="critical"
+        )
+        
+        # Status indicators
+        status_layout = BoxLayout(orientation='vertical', spacing=dp(5))
+        
+        # Full Blockage
+        full_Blockage = AlertButton(
+            text="Full\nBlockage",
+            font_size=sp(10),
+            color=(1, 1, 1, 1),
+            alert_type="critical",
+            halign="center"
+        )
+        full_Blockage.text_size = (dp(100), None)
+        
+        # Partial Blockage
+        partial_Blockage = AlertButton(
+            text="Partial\nBlockage",
+            font_size=sp(10),
+            color=(1, 1, 1, 1),
+            alert_type="normal",
+            halign="center"
+        )
+        partial_Blockage.text_size = (dp(100), None)
+        
+        # No Blockage
+        no_Blockage = AlertButton(
+            text="No\nBlockage",
+            font_size=sp(10),
+            color=(1, 1, 1, 1),
+            alert_type="info",
+            halign="center"
+        )
+        no_Blockage.text_size = (dp(100), None)
+        
+        self.add_widget(critical_btn)
+        self.add_widget(Widget(size_hint_y=0.2))  # Spacer
+        self.add_widget(full_Blockage)
+        self.add_widget(partial_Blockage)
+        self.add_widget(no_Blockage)
+        self.add_widget(Widget())  # Flexible spacer
+        
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
+
 class ResponsiveStackApp(App):
     def build(self):
-        # Configure for 800x480 display
+        # Configure window
         from kivy.config import Config
-        Config.set('graphics', 'width', '800')
-        Config.set('graphics', 'height', '480')
-        Config.set('graphics', 'resizable', True)  # Set to False for production
+        Config.set('graphics', 'width', '900')
+        Config.set('graphics', 'height', '500')
+        Config.set('graphics', 'resizable', True)
         
-        # Main container
-        root = BoxLayout(orientation='vertical', spacing=dp(5), padding=dp(10))
+        # Main horizontal container
+        root = BoxLayout(orientation='horizontal', spacing=dp(10), padding=dp(10))
         
-        # Black background
+        # Dark background
         with root.canvas.before:
-            Color(0.05, 0.05, 0.05, 1)
+            Color(0.02, 0.02, 0.02, 1)
             self.bg = Rectangle(size=root.size, pos=root.pos)
             root.bind(size=self._update_bg, pos=self._update_bg)
         
-        # Create 4 components with equal height distribution
+        # Left side - Medical components
+        components_layout = BoxLayout(orientation='vertical', spacing=dp(8))
+        
+        # Create 4 components
         components = [
             RespiratoryComponent(size_hint_y=0.25),
             CO2Component(size_hint_y=0.25),
@@ -399,7 +577,13 @@ class ResponsiveStackApp(App):
         ]
         
         for component in components:
-            root.add_widget(component)
+            components_layout.add_widget(component)
+        
+        # Right side - Alert sidebar
+        sidebar = SidebarPanel()
+        
+        root.add_widget(components_layout)
+        root.add_widget(sidebar)
             
         return root
     
