@@ -410,7 +410,7 @@ class HeartRateComponent(FloatLayout):
             text="[b]Heart rate (HR) :[/b]",
             markup=True,
             size_hint=(None, None),
-            size=(dp(160), dp(36)),
+            size=(dp(275), dp(200)),
             color=(126 / 255, 255 / 255, 236 / 255, 1),
             font_name=roboto_bold_path
             if os.path.exists(roboto_bold_path)
@@ -426,46 +426,72 @@ class HeartRateComponent(FloatLayout):
         )
         self.value_label = Label(
             text="98",
-            font_size=sp(36),
+            font_size=sp(72),
             color=(1, 1, 1, 1),
-            bold=True,
             size_hint=(None, None),
-            size=(dp(60), dp(38)),
+            size=(dp(275), dp(130)),
             halign="right",
             valign="middle",
         )
         self.value_label.bind(size=self.value_label.setter("text_size"))
 
-        self.min_label = Label(
-            text="Min: --",
-            font_size=sp(14),
-            color=(0.7, 0.7, 0.7, 1),
-            size_hint=(None, None),
-            size=(dp(70), dp(20)),
-        )
-        self.max_label = Label(
-            text="Max: --",
-            font_size=sp(14),
-            color=(0.7, 0.7, 0.7, 1),
-            size_hint=(None, None),
-            size=(dp(70), dp(20)),
-        )
-
         value_row.add_widget(self.value_label)
+
         left_layout.add_widget(title_label)
         left_layout.add_widget(value_row)
-        left_layout.add_widget(self.min_label)
-        left_layout.add_widget(self.max_label)
 
-        # Graph
+        # Graph widget
         self.graph_widget = Widget(size_hint_y=0.80)
         with self.graph_widget.canvas:
             Color(126 / 255, 255 / 255, 236 / 255, 1)
-            self.graph_line = Line(width=dp(2))
+            self.graph_line = Line(width=dp(1.5))
         self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
 
+        # Min/Max vertical layout aligned with graph
+        min_max_layout = BoxLayout(
+            orientation="vertical",
+            size_hint=(None, 1),
+            width=dp(150),
+            padding=(dp(50), 0, dp(50), dp(30)),
+        )
+        self.max_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(90),
+            halign="left",
+            valign="middle",
+        )
+        self.max_label.bind(size=self.max_label.setter("text_size"))
+
+        self.min_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(20),
+            halign="left",
+            valign="middle",
+        )
+        self.min_label.bind(size=self.min_label.setter("text_size"))
+
+        min_max_layout.add_widget(self.max_label)
+        min_max_layout.add_widget(self.min_label)
+        graph_layout = BoxLayout(
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+        )
+
+        # Set the graph widget to take less horizontal space
+        self.graph_widget.size_hint = (0.5, 1)
+
+        # Reorder: min/max comes first (on the left), then the graph
+        graph_layout.add_widget(min_max_layout)
+        graph_layout.add_widget(self.graph_widget)
+
+        # Add to content layout
         content_layout.add_widget(left_layout)
-        content_layout.add_widget(self.graph_widget)
+        content_layout.add_widget(graph_layout)
 
         # Top-left Icon
         self.icon = Image(
@@ -477,7 +503,7 @@ class HeartRateComponent(FloatLayout):
         self.add_widget(self.icon)
 
         # Data buffer for dynamic waveform
-        self.data_buffer = [random.randint(90, 110) for _ in range(30)]
+        self.data_buffer = [random.randint(90, 110) for _ in range(60)]
         self.max_val = max(self.data_buffer)
         self.min_val = min(self.data_buffer)
 
@@ -511,8 +537,8 @@ class HeartRateComponent(FloatLayout):
         self.max_val = max(self.data_buffer)
         self.min_val = min(self.data_buffer)
         self.value_label.text = str(new_value)
-        self.max_label.text = f"Max: {self.max_val}"
-        self.min_label.text = f"Min: {self.min_val}"
+        self.max_label.text = f"{self.max_val}"
+        self.min_label.text = f"{self.min_val}"
         self.update_graph()
 
 
