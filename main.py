@@ -8,6 +8,9 @@ from kivy.clock import Clock
 from kivy.metrics import dp, sp
 import math
 import random
+from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image
+from kivy.properties import ListProperty
 
 class ResponsiveComponent(BoxLayout):
     """Base class for responsive medical components"""
@@ -452,108 +455,236 @@ class HeartRateComponent(ResponsiveComponent):
         new_value = 95 + random.randint(-5, 8)
         self.value_label.text = str(new_value)
 
-class AlertButton(Button):
-    """Custom alert button with proper styling"""
-    def __init__(self, alert_type="warning", **kwargs):
-        super().__init__(**kwargs)
-        self.alert_type = alert_type
-        self.size_hint_y = None
-        self.height = dp(60)
-        
-        # Remove default button styling
-        self.background_color = (0, 0, 0, 0)
-        
-        # Colors based on alert type
-        colors = {
-            "critical": (0.9, 0.1, 0.1, 1),
-            "warning": (1, 0.5, 0.1, 1),
-            "normal": (0.3, 0.3, 0.3, 1),
-            "info": (0.2, 0.6, 0.9, 1)
-        }
-        
-        self.alert_color = colors.get(alert_type, colors["normal"])
-        
-        with self.canvas.before:
-            Color(*self.alert_color)
-            self.bg_rect = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(8)])
-            
-        self.bind(pos=self.update_bg, size=self.update_bg)
-        
-    def update_bg(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
-
 class SidebarPanel(BoxLayout):
-    """Right sidebar with alert buttons"""
+    """Right sidebar with exact dimensions matching your design"""
+    
     def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', size_hint_x=None, width=dp(120), 
-                        spacing=dp(10), padding=dp(10), **kwargs)
+        super().__init__(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(dp(247), dp(718)),  # Main container dimensions as specified
+            spacing=dp(10),
+            padding=dp(20),
+            **kwargs
+        )
+        self.bind(pos=self.update_graphics, size=self.update_graphics)
         
-        # Background
-        with self.canvas.before:
-            Color(0.05, 0.05, 0.05, 1)
-            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
-            
-        self.bind(pos=self.update_bg, size=self.update_bg)
-        
-        # Critical Alert
-        critical_btn = AlertButton(
-            text="!",
-            font_size=sp(24),
-            color=(1, 1, 1, 1),
-            alert_type="critical"
+        # Top caution section
+        caution_section = BoxLayout(
+            size_hint=(None, None),
+            size=(dp(200), dp(163)),
+            pos_hint={'center_x': 0.5}
         )
         
-        # Status indicators
-        status_layout = BoxLayout(orientation='vertical', spacing=dp(5))
-        
-        # Full Blockage
-        full_Blockage = AlertButton(
-            text="Full\nBlockage",
-            font_size=sp(10),
-            color=(1, 1, 1, 1),
-            alert_type="critical",
-            halign="center"
+        caution_image = Image(
+            source='./assets/Group_8.png',
+            size_hint=(None, None),
+            size=(dp(200), dp(163)),
+            pos_hint={'center_x': 0.5, 'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True
         )
-        full_Blockage.text_size = (dp(100), None)
+        caution_section.add_widget(caution_image)
+        self.add_widget(caution_section)
         
-        # Partial Blockage
-        partial_Blockage = AlertButton(
-            text="Partial\nBlockage",
-            font_size=sp(10),
-            color=(1, 1, 1, 1),
-            alert_type="normal",
-            halign="center"
-        )
-        partial_Blockage.text_size = (dp(100), None)
-        
-        # No Blockage
-        no_Blockage = AlertButton(
-            text="No\nBlockage",
-            font_size=sp(10),
-            color=(1, 1, 1, 1),
-            alert_type="info",
-            halign="center"
-        )
-        no_Blockage.text_size = (dp(100), None)
-        
-        self.add_widget(critical_btn)
-        self.add_widget(Widget(size_hint_y=0.2))  # Spacer
-        self.add_widget(full_Blockage)
-        self.add_widget(partial_Blockage)
-        self.add_widget(no_Blockage)
-        self.add_widget(Widget())  # Flexible spacer
-        
-    def update_bg(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
+        # Spacer between sections
+        self.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
+        # Status section container (holds all three status items)
+        status_section = BoxLayout(
+            orientation='vertical',
+            size_hint=(None, None),
+            size=(dp(205), dp(300)),  # Reduced height from 378 to 300
+            spacing=dp(15),  # Reduced spacing from 20 to 15
+            pos_hint={'center_x': 0.5}
+        )
+        status_section.bind(pos=self.status_section_bg, size=self.status_section_bg)
+
+        # Status items data
+        status_data = [
+            ('assets/Rectangle_35.png', 'Full\nBlockage'),
+            ('assets/Rectangle_36.png', 'Partial\nBlockage'),
+            ('assets/Rectangle_37.png', 'No\nBlockage')
+        ]
+        
+        # Create status items
+        for image_path, label_text in status_data:
+            status_row = BoxLayout(
+                orientation='horizontal',
+                size_hint=(1, None),
+                height=dp(75),  # Reduced height from 90 to 75
+                spacing=dp(15),
+                padding=[dp(10), dp(10), dp(10), dp(10)]
+            )
+            
+            status_image = Image(
+                source=image_path,
+                size_hint=(None, None),
+                size=(dp(69), dp(63)),
+                allow_stretch=True,
+                keep_ratio=True
+            )
+            
+            status_label = Label(
+                text=label_text,
+                font_size=dp(14),
+                color=(1, 1, 1, 1),
+                halign='left',
+                valign='middle'
+            )
+            status_label.bind(size=status_label.setter('text_size'))
+            
+            status_row.add_widget(status_image)
+            status_row.add_widget(status_label)
+            status_section.add_widget(status_row)
+
+        self.add_widget(status_section)
+        
+        # Spacer between status section and new rectangles
+        self.add_widget(Widget(size_hint_y=None, height=dp(10)))
+        
+        # Rectangle 1
+        rect1 = BoxLayout(
+            size_hint=(None, None),
+            size=(dp(205), dp(60)),
+            pos_hint={'center_x': 0.5}
+        )
+        rect1.bind(pos=self.rect_bg, size=self.rect_bg)
+        
+        rect1_label = Label(
+            text='Rect 1',
+            font_size=dp(14),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle'
+        )
+        rect1_label.bind(size=rect1_label.setter('text_size'))
+        rect1.add_widget(rect1_label)
+        self.add_widget(rect1)
+        
+        # Small spacer between rectangles
+        self.add_widget(Widget(size_hint_y=None, height=dp(10)))
+        
+        # Rectangle 2
+        rect2 = BoxLayout(
+            size_hint=(None, None),
+            size=(dp(205), dp(60)),
+            pos_hint={'center_x': 0.5}
+        )
+        rect2.bind(pos=self.rect_bg, size=self.rect_bg)
+        
+        rect2_label = Label(
+            text='Rect 2',
+            font_size=dp(14),
+            color=(1, 1, 1, 1),
+            halign='center',
+            valign='middle'
+        )
+        rect2_label.bind(size=rect2_label.setter('text_size'))
+        rect2.add_widget(rect2_label)
+        self.add_widget(rect2)
+        
+        # Flexible bottom spacer
+        self.add_widget(Widget())
+
+    def update_graphics(self, *args):
+        """Draw the main container background and styling"""
+        self.canvas.before.clear()
+        with self.canvas.before:
+            # --- Inset shadow simulation ---
+            Color(0, 0, 0, 0.6)  # Black with 60% opacity
+            RoundedRectangle(
+                pos=(self.x, self.y - dp(4)),  # Offset shadow down by 4px
+                size=(self.width, self.height + dp(8)),  # Slightly taller for shadow effect
+                radius=[dp(28)]
+            )
+            
+            # --- Main background ---
+            Color(148/255, 155/255, 164/255, 0.25)
+            RoundedRectangle(
+                pos=self.pos,
+                size=self.size,
+                radius=[dp(28)]
+            )
+            
+            # --- Border ---
+            Color(245/255, 245/255, 245/255, 1)
+            Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
+                width=dp(1)
+            )
+
+    def status_section_bg(self, instance, value):
+        """Draw background for the status section with all effects"""
+        instance.canvas.before.clear()
+        with instance.canvas.before:
+            # Box shadow (drawn first, appears behind)
+            Color(0, 0, 0, 0.4)
+            RoundedRectangle(
+                pos=(instance.x, instance.y - dp(4)),
+                size=instance.size,
+                radius=[dp(28)]
+            )
+            
+            # Background with transparency
+            Color(148/255, 155/255, 164/255, 0.15)
+            RoundedRectangle(
+                pos=instance.pos,
+                size=instance.size,
+                radius=[dp(28)]
+            )
+            
+            # Border
+            Color(234/255, 234/255, 234/255, 1)  # #EAEAEA
+            Line(
+                rounded_rectangle=(
+                    instance.x, 
+                    instance.y, 
+                    instance.width, 
+                    instance.height, 
+                    dp(28)
+                ),
+                width=0.5  # 0.5px border
+            )
+    
+    def rect_bg(self, instance, value):
+        """Draw background for the rectangle sections"""
+        instance.canvas.before.clear()
+        with instance.canvas.before:
+            # Box shadow
+            Color(0, 0, 0, 0.4)
+            RoundedRectangle(
+                pos=(instance.x, instance.y - dp(2)),
+                size=instance.size,
+                radius=[dp(28)]
+            )
+            
+            # Background with transparency
+            Color(148/255, 155/255, 164/255, 0.15)
+            RoundedRectangle(
+                pos=instance.pos,
+                size=instance.size,
+                radius=[dp(28)]
+            )
+            
+            # Border
+            Color(234/255, 234/255, 234/255, 1)
+            Line(
+                rounded_rectangle=(
+                    instance.x, 
+                    instance.y, 
+                    instance.width, 
+                    instance.height, 
+                    dp(28)
+                ),
+                width=0.5
+            )
 class ResponsiveStackApp(App):
     def build(self):
         # Configure window
         from kivy.config import Config
-        Config.set('graphics', 'width', '900')
-        Config.set('graphics', 'height', '500')
+        Config.set('graphics', 'width', '1280')
+        Config.set('graphics', 'height', '800')
         Config.set('graphics', 'resizable', True)
         
         # Main horizontal container
