@@ -16,7 +16,6 @@ from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.togglebutton import ToggleButtonBehavior
 
 
-
 class ResponsiveComponent(BoxLayout):
     """Base class for responsive medical components"""
 
@@ -551,8 +550,8 @@ class SidebarPanel(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(
             orientation="vertical",
-            size_hint=(None, 1),  
-            width=dp(300),        
+            size_hint=(None, 1),
+            width=dp(300),
             spacing=dp(10),
             padding=dp(20),
             **kwargs,
@@ -710,7 +709,6 @@ class SidebarPanel(BoxLayout):
                 ),
                 width=0.5,
             )
-
 
 
 class ResponsiveStackApp(App):
