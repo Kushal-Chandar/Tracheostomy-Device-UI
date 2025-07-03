@@ -12,6 +12,9 @@ import math
 import random
 from kivy.properties import ListProperty
 import os
+from kivy.uix.relativelayout import RelativeLayout
+from kivy.uix.togglebutton import ToggleButtonBehavior
+
 
 
 class ResponsiveComponent(BoxLayout):
@@ -543,13 +546,13 @@ class HeartRateComponent(FloatLayout):
 
 
 class SidebarPanel(BoxLayout):
-    """Right sidebar with exact dimensions matching your design"""
+    """Right sidebar with updated layout and switches"""
 
     def __init__(self, **kwargs):
         super().__init__(
             orientation="vertical",
-            size_hint=(None, None),
-            size=(dp(247), dp(718)),  # Main container dimensions as specified
+            size_hint=(None, 1),  
+            width=dp(300),        
             spacing=dp(10),
             padding=dp(20),
             **kwargs,
@@ -558,13 +561,12 @@ class SidebarPanel(BoxLayout):
 
         # Top caution section
         caution_section = BoxLayout(
-            size_hint=(None, None), size=(dp(200), dp(163)), pos_hint={"center_x": 0.5}
+            size_hint=(None, None), size=(dp(300), dp(263)), pos_hint={"center_x": 0.5}
         )
-
         caution_image = Image(
             source="./assets/Group_8.png",
             size_hint=(None, None),
-            size=(dp(200), dp(163)),
+            size=(dp(300), dp(263)),
             pos_hint={"center_x": 0.5, "center_y": 0.5},
             allow_stretch=True,
             keep_ratio=True,
@@ -572,44 +574,38 @@ class SidebarPanel(BoxLayout):
         caution_section.add_widget(caution_image)
         self.add_widget(caution_section)
 
-        # Spacer between sections
         self.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
-        # Status section container (holds all three status items)
         status_section = BoxLayout(
             orientation="vertical",
             size_hint=(None, None),
-            size=(dp(205), dp(300)),  # Reduced height from 378 to 300
-            spacing=dp(15),  # Reduced spacing from 20 to 15
+            size=(dp(260), dp(240)),
+            spacing=dp(10),
             pos_hint={"center_x": 0.5},
         )
         status_section.bind(pos=self.status_section_bg, size=self.status_section_bg)
 
-        # Status items data
         status_data = [
             ("assets/Rectangle_35.png", "Full\nBlockage"),
             ("assets/Rectangle_36.png", "Partial\nBlockage"),
             ("assets/Rectangle_37.png", "No\nBlockage"),
         ]
 
-        # Create status items
         for image_path, label_text in status_data:
             status_row = BoxLayout(
                 orientation="horizontal",
                 size_hint=(1, None),
-                height=dp(75),  # Reduced height from 90 to 75
-                spacing=dp(15),
-                padding=[dp(10), dp(10), dp(10), dp(10)],
+                height=dp(65),
+                spacing=dp(10),
+                padding=[dp(10), dp(5), dp(10), dp(5)],
             )
-
             status_image = Image(
                 source=image_path,
                 size_hint=(None, None),
-                size=(dp(69), dp(63)),
+                size=(dp(50), dp(50)),
                 allow_stretch=True,
                 keep_ratio=True,
             )
-
             status_label = Label(
                 text=label_text,
                 font_size=dp(14),
@@ -618,76 +614,74 @@ class SidebarPanel(BoxLayout):
                 valign="middle",
             )
             status_label.bind(size=status_label.setter("text_size"))
-
             status_row.add_widget(status_image)
             status_row.add_widget(status_label)
             status_section.add_widget(status_row)
 
         self.add_widget(status_section)
+        self.add_widget(Widget(size_hint_y=None, height=dp(20)))
 
-        # Spacer between status section and new rectangles
+        # Toggle switches
+        self.add_widget(self.create_toggle("Saline"))
         self.add_widget(Widget(size_hint_y=None, height=dp(10)))
-
-        # Rectangle 1
-        rect1 = BoxLayout(
-            size_hint=(None, None), size=(dp(205), dp(60)), pos_hint={"center_x": 0.5}
-        )
-        rect1.bind(pos=self.rect_bg, size=self.rect_bg)
-
-        rect1_label = Label(
-            text="Rect 1",
-            font_size=dp(14),
-            color=(1, 1, 1, 1),
-            halign="center",
-            valign="middle",
-        )
-        rect1_label.bind(size=rect1_label.setter("text_size"))
-        rect1.add_widget(rect1_label)
-        self.add_widget(rect1)
-
-        # Small spacer between rectangles
-        self.add_widget(Widget(size_hint_y=None, height=dp(10)))
-
-        # Rectangle 2
-        rect2 = BoxLayout(
-            size_hint=(None, None), size=(dp(205), dp(60)), pos_hint={"center_x": 0.5}
-        )
-        rect2.bind(pos=self.rect_bg, size=self.rect_bg)
-
-        rect2_label = Label(
-            text="Rect 2",
-            font_size=dp(14),
-            color=(1, 1, 1, 1),
-            halign="center",
-            valign="middle",
-        )
-        rect2_label.bind(size=rect2_label.setter("text_size"))
-        rect2.add_widget(rect2_label)
-        self.add_widget(rect2)
-
-        # Flexible bottom spacer
+        self.add_widget(self.create_toggle("Suction"))
         self.add_widget(Widget())
 
+    def create_toggle(self, label_text):
+        toggle_layout = BoxLayout(
+            orientation="horizontal",
+            size_hint=(None, None),
+            size=(dp(205), dp(60)),
+            spacing=dp(10),
+            pos_hint={"center_x": 0.5},
+            padding=[dp(10), dp(10), dp(10), dp(10)],
+        )
+
+        label = Label(
+            text=f"{label_text}: OFF",
+            font_size=dp(14),
+            color=(1, 1, 1, 1),
+            halign="left",
+            valign="middle",
+        )
+        label.bind(size=label.setter("text_size"))
+
+        toggle_button = Button(
+            text="OFF",
+            size_hint=(None, None),
+            size=(dp(80), dp(40)),
+            background_normal="",
+            background_color=(0.5, 0.5, 0.5, 1),
+            color=(1, 1, 1, 1),
+        )
+
+        def toggle_state(instance):
+            if instance.text == "OFF":
+                instance.text = "ON"
+                instance.background_color = (0, 0.7, 0.3, 1)
+                label.text = f"{label_text}: ON"
+            else:
+                instance.text = "OFF"
+                instance.background_color = (0.5, 0.5, 0.5, 1)
+                label.text = f"{label_text}: OFF"
+
+        toggle_button.bind(on_press=toggle_state)
+
+        toggle_layout.add_widget(label)
+        toggle_layout.add_widget(toggle_button)
+        return toggle_layout
+
     def update_graphics(self, *args):
-        """Draw the main container background and styling"""
         self.canvas.before.clear()
         with self.canvas.before:
-            # --- Inset shadow simulation ---
-            Color(0, 0, 0, 0.6)  # Black with 60% opacity
+            Color(0, 0, 0, 0.6)
             RoundedRectangle(
-                pos=(self.x, self.y - dp(4)),  # Offset shadow down by 4px
-                size=(
-                    self.width,
-                    self.height + dp(8),
-                ),  # Slightly taller for shadow effect
+                pos=(self.x, self.y - dp(4)),
+                size=(self.width, self.height + dp(8)),
                 radius=[dp(28)],
             )
-
-            # --- Main background ---
             Color(148 / 255, 155 / 255, 164 / 255, 0.25)
             RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(28)])
-
-            # --- Border ---
             Color(245 / 255, 245 / 255, 245 / 255, 1)
             Line(
                 rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
@@ -695,51 +689,16 @@ class SidebarPanel(BoxLayout):
             )
 
     def status_section_bg(self, instance, value):
-        """Draw background for the status section with all effects"""
         instance.canvas.before.clear()
         with instance.canvas.before:
-            # Box shadow (drawn first, appears behind)
             Color(0, 0, 0, 0.4)
             RoundedRectangle(
                 pos=(instance.x, instance.y - dp(4)),
                 size=instance.size,
                 radius=[dp(28)],
             )
-
-            # Background with transparency
             Color(148 / 255, 155 / 255, 164 / 255, 0.15)
             RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(28)])
-
-            # Border
-            Color(234 / 255, 234 / 255, 234 / 255, 1)  # #EAEAEA
-            Line(
-                rounded_rectangle=(
-                    instance.x,
-                    instance.y,
-                    instance.width,
-                    instance.height,
-                    dp(28),
-                ),
-                width=0.5,  # 0.5px border
-            )
-
-    def rect_bg(self, instance, value):
-        """Draw background for the rectangle sections"""
-        instance.canvas.before.clear()
-        with instance.canvas.before:
-            # Box shadow
-            Color(0, 0, 0, 0.4)
-            RoundedRectangle(
-                pos=(instance.x, instance.y - dp(2)),
-                size=instance.size,
-                radius=[dp(28)],
-            )
-
-            # Background with transparency
-            Color(148 / 255, 155 / 255, 164 / 255, 0.15)
-            RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(28)])
-
-            # Border
             Color(234 / 255, 234 / 255, 234 / 255, 1)
             Line(
                 rounded_rectangle=(
@@ -751,6 +710,7 @@ class SidebarPanel(BoxLayout):
                 ),
                 width=0.5,
             )
+
 
 
 class ResponsiveStackApp(App):
