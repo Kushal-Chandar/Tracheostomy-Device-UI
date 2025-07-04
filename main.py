@@ -5,387 +5,19 @@ from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivy.uix.image import Image
 from kivy.uix.button import Button
-from kivy.graphics import Color, Rectangle, Line, Ellipse, RoundedRectangle
+from kivy.graphics import Color, Rectangle, Line, RoundedRectangle
 from kivy.clock import Clock
 from kivy.metrics import dp, sp
 import math
-import random
-from kivy.properties import ListProperty
 import os
-from kivy.uix.relativelayout import RelativeLayout
-from kivy.uix.togglebutton import ToggleButtonBehavior
+import random
 
 
-class ResponsiveComponent(BoxLayout):
-    """Base class for responsive medical components"""
-
-    def __init__(
-        self,
-        title="Component",
-        bg_color=(0.15, 0.15, 0.15, 1),
-        icon_color=(1, 1, 1, 1),
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.orientation = "horizontal"
-        self.spacing = dp(15)
-        self.padding = [dp(20), dp(15), dp(20), dp(15)]
-        self.title = title
-        self.bg_color = bg_color
-        self.icon_color = icon_color
-
-        # Create rounded background
-        with self.canvas.before:
-            Color(*self.bg_color)
-            self.bg_rect = RoundedRectangle(
-                pos=self.pos, size=self.size, radius=[dp(8)]
-            )
-
-        self.bind(pos=self.update_bg, size=self.update_bg)
-
-    def update_bg(self, *args):
-        self.bg_rect.pos = self.pos
-        self.bg_rect.size = self.size
-
-
-class RespiratoryComponent(ResponsiveComponent):
-    """Respiratory Rate Component"""
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            title="Respiratory Rate (RR)",
-            bg_color=(0.08, 0.12, 0.16, 1),
-            icon_color=(0.4, 0.8, 1, 1),
-            **kwargs,
-        )
-
-        # Left side - Icon and title
-        left_layout = BoxLayout(orientation="vertical", size_hint_x=0.25, spacing=dp(5))
-
-        # Icon widget
-        icon_container = Widget(size_hint_y=0.4)
-        with icon_container.canvas:
-            Color(*self.icon_color)
-            # Lungs icon representation
-            self.icon_ellipse1 = Ellipse(size=(dp(15), dp(25)))
-            self.icon_ellipse2 = Ellipse(size=(dp(15), dp(25)))
-        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
-
-        # Title
-        title_label = Label(
-            text="Respiratory Rate (RR):",
-            font_size=sp(11),
-            color=(0.7, 0.7, 0.7, 1),
-            halign="left",
-            valign="bottom",
-            size_hint_y=0.3,
-        )
-        title_label.bind(size=title_label.setter("text_size"))
-
-        # Value
-        self.value_label = Label(
-            text="24",
-            font_size=sp(48),
-            color=(1, 1, 1, 1),
-            bold=True,
-            halign="left",
-            size_hint_y=0.6,
-        )
-        self.value_label.bind(size=self.value_label.setter("text_size"))
-
-        # Unit
-        unit_label = Label(
-            text="bpm",
-            font_size=sp(12),
-            color=(0.5, 0.5, 0.5, 1),
-            halign="left",
-            valign="top",
-            size_hint_y=0.2,
-        )
-        unit_label.bind(size=unit_label.setter("text_size"))
-
-        left_layout.add_widget(icon_container)
-        left_layout.add_widget(title_label)
-
-        # Value section
-        value_layout = BoxLayout(orientation="vertical", size_hint_x=0.2)
-        value_layout.add_widget(self.value_label)
-        value_layout.add_widget(unit_label)
-
-        # Right side - Graph
-        self.graph_widget = Widget(size_hint_x=0.55)
-        with self.graph_widget.canvas:
-            Color(*self.icon_color, 0.8)
-            self.graph_line = Line(width=2)
-        self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
-
-        self.add_widget(left_layout)
-        self.add_widget(value_layout)
-        self.add_widget(self.graph_widget)
-
-        # Animation
-        Clock.schedule_interval(self.update_data, 0.1)
-
-    def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2
-        center_y = widget.y + widget.height / 2
-        self.icon_ellipse1.pos = (center_x - dp(20), center_y - dp(12))
-        self.icon_ellipse2.pos = (center_x + dp(5), center_y - dp(12))
-
-    def update_graph(self, *args):
-        if self.graph_widget.width < 100:
-            return
-
-        # Generate sine wave for respiratory pattern
-        points = []
-        for i in range(0, int(self.graph_widget.width - dp(20)), 3):
-            x = self.graph_widget.x + dp(10) + i
-            y = (
-                self.graph_widget.y
-                + self.graph_widget.height / 2
-                + math.sin(i * 0.015) * self.graph_widget.height / 3
-            )
-            points.extend([x, y])
-
-        if len(points) > 2:
-            self.graph_line.points = points
-
-    def update_data(self, dt):
-        new_value = 22 + random.randint(-2, 4)
-        self.value_label.text = str(new_value)
-
-
-class CO2Component(ResponsiveComponent):
-    """CO2 Level Component"""
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            title="ETCO2",
-            bg_color=(0.08, 0.12, 0.16, 1),
-            icon_color=(0.3, 1, 0.5, 1),
-            **kwargs,
-        )
-
-        # Left side - Icon and title
-        left_layout = BoxLayout(orientation="vertical", size_hint_x=0.25, spacing=dp(5))
-
-        # Icon widget
-        icon_container = Widget(size_hint_y=0.4)
-        with icon_container.canvas:
-            Color(*self.icon_color)
-            self.co2_text = Rectangle(size=(dp(35), dp(20)))
-        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
-
-        # Title
-        title_label = Label(
-            text="ETCO2:",
-            font_size=sp(11),
-            color=(0.7, 0.7, 0.7, 1),
-            halign="left",
-            valign="bottom",
-            size_hint_y=0.3,
-        )
-        title_label.bind(size=title_label.setter("text_size"))
-
-        # Value
-        self.value_label = Label(
-            text="42",
-            font_size=sp(48),
-            color=(1, 1, 1, 1),
-            bold=True,
-            halign="left",
-            size_hint_y=0.6,
-        )
-        self.value_label.bind(size=self.value_label.setter("text_size"))
-
-        # Unit
-        unit_label = Label(
-            text="mmHg",
-            font_size=sp(12),
-            color=(0.5, 0.5, 0.5, 1),
-            halign="left",
-            valign="top",
-            size_hint_y=0.2,
-        )
-        unit_label.bind(size=unit_label.setter("text_size"))
-
-        left_layout.add_widget(icon_container)
-        left_layout.add_widget(title_label)
-
-        # Value section
-        value_layout = BoxLayout(orientation="vertical", size_hint_x=0.2)
-        value_layout.add_widget(self.value_label)
-        value_layout.add_widget(unit_label)
-
-        # Right side - Graph (square wave pattern)
-        self.graph_widget = Widget(size_hint_x=0.55)
-        with self.graph_widget.canvas:
-            Color(*self.icon_color, 0.8)
-            self.graph_line = Line(width=2)
-        self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
-
-        self.add_widget(left_layout)
-        self.add_widget(value_layout)
-        self.add_widget(self.graph_widget)
-
-        Clock.schedule_interval(self.update_data, 0.2)
-
-    def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2 - dp(17)
-        center_y = widget.y + widget.height / 2 - dp(10)
-        self.co2_text.pos = (center_x, center_y)
-
-    def update_graph(self, *args):
-        if self.graph_widget.width < 100:
-            return
-
-        # Generate square wave pattern for CO2
-        points = []
-        segment_width = (self.graph_widget.width - dp(20)) / 6
-        base_y = self.graph_widget.y + self.graph_widget.height * 0.3
-        high_y = self.graph_widget.y + self.graph_widget.height * 0.7
-
-        for i in range(6):
-            x_start = self.graph_widget.x + dp(10) + i * segment_width
-            x_mid = x_start + segment_width * 0.3
-            x_end = x_start + segment_width
-
-            if i == 0:
-                points.extend([x_start, base_y])
-            points.extend([x_mid, base_y, x_mid, high_y, x_end, high_y, x_end, base_y])
-
-        if len(points) > 2:
-            self.graph_line.points = points
-
-    def update_data(self, dt):
-        new_value = 40 + random.randint(-3, 6)
-        self.value_label.text = str(new_value)
-
-
-class SpO2Component(ResponsiveComponent):
-    """SpO2 Component"""
-
-    def __init__(self, **kwargs):
-        super().__init__(
-            title="SPO2",
-            bg_color=(0.08, 0.12, 0.16, 1),
-            icon_color=(0.9, 0.4, 0.9, 1),
-            **kwargs,
-        )
-
-        # Left side - Icon and title
-        left_layout = BoxLayout(orientation="vertical", size_hint_x=0.25, spacing=dp(5))
-
-        # Icon widget
-        icon_container = Widget(size_hint_y=0.4)
-        with icon_container.canvas:
-            Color(*self.icon_color)
-            self.icon_circle = Ellipse(size=(dp(30), dp(30)))
-        icon_container.bind(size=self.update_icon_pos, pos=self.update_icon_pos)
-
-        # Title
-        title_label = Label(
-            text="SPO2:",
-            font_size=sp(11),
-            color=(0.7, 0.7, 0.7, 1),
-            halign="left",
-            valign="bottom",
-            size_hint_y=0.3,
-        )
-        title_label.bind(size=title_label.setter("text_size"))
-
-        # Value with percentage
-        self.value_label = Label(
-            text="92",
-            font_size=sp(48),
-            color=(1, 1, 1, 1),
-            bold=True,
-            halign="left",
-            size_hint_y=0.6,
-        )
-        self.value_label.bind(size=self.value_label.setter("text_size"))
-
-        # Unit
-        unit_label = Label(
-            text="%",
-            font_size=sp(12),
-            color=(0.5, 0.5, 0.5, 1),
-            halign="left",
-            valign="top",
-            size_hint_y=0.2,
-        )
-        unit_label.bind(size=unit_label.setter("text_size"))
-
-        left_layout.add_widget(icon_container)
-        left_layout.add_widget(title_label)
-
-        # Value section
-        value_layout = BoxLayout(orientation="vertical", size_hint_x=0.2)
-        value_layout.add_widget(self.value_label)
-        value_layout.add_widget(unit_label)
-
-        # Right side - Pulse wave
-        self.graph_widget = Widget(size_hint_x=0.55)
-        with self.graph_widget.canvas:
-            Color(*self.icon_color, 0.8)
-            self.graph_line = Line(width=2)
-        self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
-
-        self.add_widget(left_layout)
-        self.add_widget(value_layout)
-        self.add_widget(self.graph_widget)
-
-        Clock.schedule_interval(self.update_data, 0.15)
-
-    def update_icon_pos(self, widget, *args):
-        center_x = widget.x + widget.width / 2 - dp(15)
-        center_y = widget.y + widget.height / 2 - dp(15)
-        self.icon_circle.pos = (center_x, center_y)
-
-    def update_graph(self, *args):
-        if self.graph_widget.width < 100:
-            return
-
-        # Generate pulse wave pattern
-        points = []
-        pulse_width = (self.graph_widget.width - dp(20)) / 4
-        base_y = self.graph_widget.y + self.graph_widget.height * 0.4
-
-        for i in range(4):
-            x_start = self.graph_widget.x + dp(10) + i * pulse_width
-
-            # Pulse pattern points
-            for j in range(int(pulse_width)):
-                x = x_start + j
-                if j < pulse_width * 0.1:  # Rising edge
-                    y = (
-                        base_y
-                        + (j / (pulse_width * 0.1)) * self.graph_widget.height * 0.3
-                    )
-                elif j < pulse_width * 0.2:  # Peak
-                    y = base_y + self.graph_widget.height * 0.3
-                elif j < pulse_width * 0.4:  # Falling edge
-                    y = base_y + self.graph_widget.height * 0.3 * (
-                        1 - (j - pulse_width * 0.2) / (pulse_width * 0.2)
-                    )
-                else:  # Baseline
-                    y = base_y
-
-                points.extend([x, y])
-
-        if len(points) > 2:
-            self.graph_line.points = points
-
-    def update_data(self, dt):
-        new_value = 90 + random.randint(-2, 5)
-        self.value_label.text = str(new_value)
-
-
-class HeartRateComponent(FloatLayout):
+class RespiratoryComponent(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint_y = None
-        self.height = dp(180)
+        self.height = dp(190)
 
         # Background rectangle
         with self.canvas.before:
@@ -399,13 +31,545 @@ class HeartRateComponent(FloatLayout):
         content_layout = BoxLayout(
             orientation="horizontal",
             spacing=dp(16),
-            padding=[dp(24), dp(16), dp(24), dp(16)],
+            padding=[dp(30), dp(16), dp(24), dp(620)],
         )
         self.add_widget(content_layout)
 
         # Left section: text content
         left_layout = BoxLayout(
             orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(160)
+        )
+        roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
+        title_label = Label(
+            text="[b]Respiratory Rate(RR):[/b]",
+            markup=True,
+            size_hint=(None, None),
+            size=(dp(275), dp(200)),
+            color=(126 / 255, 255 / 255, 236 / 255, 1),
+            font_name=roboto_bold_path
+            if os.path.exists(roboto_bold_path)
+            else "Roboto",
+            font_size=14,
+            halign="left",
+            valign="middle",
+        )
+        title_label.bind(size=title_label.setter("text_size"))
+
+        value_row = BoxLayout(
+            orientation="horizontal", spacing=dp(8), size_hint=(1, None), height=dp(38)
+        )
+        self.value_label = Label(
+            text="98",
+            font_size=sp(72),
+            color=(1, 1, 1, 1),
+            size_hint=(None, None),
+            size=(dp(275), dp(130)),
+            halign="right",
+            valign="middle",
+        )
+        self.value_label.bind(size=self.value_label.setter("text_size"))
+
+        value_row.add_widget(self.value_label)
+
+        left_layout.add_widget(title_label)
+        left_layout.add_widget(value_row)
+
+        # Graph widget
+        self.graph_widget = Widget(size_hint_y=0.80)
+        with self.graph_widget.canvas:
+            Color(126 / 255, 255 / 255, 236 / 255, 1)
+            self.graph_line = Line(width=dp(1.5))
+        self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
+
+        # Min/Max vertical layout aligned with graph
+        min_max_layout = BoxLayout(
+            orientation="vertical",
+            size_hint=(None, 1),
+            width=dp(150),
+            padding=(dp(50), 0, dp(50), dp(30)),
+        )
+        self.max_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(90),
+            halign="left",
+            valign="middle",
+        )
+        self.max_label.bind(size=self.max_label.setter("text_size"))
+
+        self.min_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(20),
+            halign="left",
+            valign="middle",
+        )
+        self.min_label.bind(size=self.min_label.setter("text_size"))
+
+        min_max_layout.add_widget(self.max_label)
+        min_max_layout.add_widget(self.min_label)
+        graph_layout = BoxLayout(
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+        )
+
+        # Set the graph widget to take less horizontal space
+        self.graph_widget.size_hint = (0.5, 1)
+
+        # Reorder: min/max comes first (on the left), then the graph
+        graph_layout.add_widget(min_max_layout)
+        graph_layout.add_widget(self.graph_widget)
+
+        # Add to content layout
+        content_layout.add_widget(left_layout)
+        content_layout.add_widget(graph_layout)
+
+        # Top-left Icon
+        self.icon = Image(
+            source="assets/rr.png",
+            size_hint=(None, None),
+            size=(dp(89), dp(87)),
+            pos_hint={"x": 0.01, "top": 0.95},
+        )
+        self.add_widget(self.icon)
+
+        # Data buffer
+        self.data_buffer = self.generate_waveform()
+        Clock.schedule_interval(self.update_data, 0.05)  # 20 FPS
+
+    def _update_bg_rect(self, *args):
+        self.bg_rect.size = self.size
+        self.bg_rect.pos = self.pos
+
+    def generate_waveform(self):
+        waveform = []
+        cycles = 5  # total breathing cycles (each cycle = inhale + exhale)
+
+        for cycle in range(cycles):
+            for i in range(40):  # 40 samples per cycle (2 seconds at 20 FPS)
+                t = i / 40.0
+                # Smooth sinusoidal wave for breathing
+                val = 14 + math.sin(t * 2 * math.pi) * 4  # peak-to-peak: 16
+                waveform.append(val)
+
+        return waveform
+
+    def update_data(self, dt):
+        # Scroll data
+        self.data_buffer = self.data_buffer[1:] + [self.data_buffer[0]]
+        new_val = int(self.data_buffer[-1])
+        self.value_label.text = str(new_val)
+        self.max_label.text = str(int(max(self.data_buffer)))
+        self.min_label.text = str(int(min(self.data_buffer)))
+        self.update_graph()
+
+    def update_graph(self, *args):
+        self.graph_widget.canvas.clear()
+        with self.graph_widget.canvas:
+            Color(126 / 255, 255 / 255, 236 / 255, 1)
+            width = self.graph_widget.width
+            height = self.graph_widget.height + dp(120)
+            x0 = self.graph_widget.x
+            y0 = self.graph_widget.y + dp(420)
+            baseline = y0 + height * 0.5  # centered vertically
+            amplitude = height * 0.4  # breathing wave needs large amplitude
+
+            n = len(self.data_buffer)
+            points = []
+            for i, val in enumerate(self.data_buffer):
+                x = x0 + i * (width / n)
+                y = baseline + ((val - 100) / 10) * amplitude
+                points.extend([x, y])
+
+            Line(points=points, width=dp(2))
+
+
+class CO2Component(FloatLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint_y = None
+        self.height = dp(190)
+
+        # Background rectangle
+        with self.canvas.before:
+            Color(148 / 255, 155 / 255, 164 / 255, 0.20)
+            self.bg_rect = RoundedRectangle(
+                size=self.size, pos=self.pos, radius=[(28, 28)] * 4
+            )
+        self.bind(size=self._update_bg_rect, pos=self._update_bg_rect)
+
+        # Main horizontal content container
+        content_layout = BoxLayout(
+            orientation="horizontal",
+            spacing=dp(16),
+            padding=[dp(24), dp(16), dp(24), dp(422)],
+        )
+        self.add_widget(content_layout)
+
+        # Left section: text content
+        left_layout = BoxLayout(
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(160)
+        )
+        roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
+        title_label = Label(
+            text="[b]ETC02:[/b]",
+            markup=True,
+            size_hint=(None, None),
+            size=(dp(275), dp(200)),
+            color=(126 / 255, 255 / 255, 236 / 255, 1),
+            font_name=roboto_bold_path
+            if os.path.exists(roboto_bold_path)
+            else "Roboto",
+            font_size=14,
+            halign="left",
+            valign="middle",
+        )
+        title_label.bind(size=title_label.setter("text_size"))
+
+        value_row = BoxLayout(
+            orientation="horizontal", spacing=dp(8), size_hint=(1, None), height=dp(38)
+        )
+        self.value_label = Label(
+            text="98",
+            font_size=sp(72),
+            color=(1, 1, 1, 1),
+            size_hint=(None, None),
+            size=(dp(275), dp(130)),
+            halign="right",
+            valign="middle",
+        )
+        self.value_label.bind(size=self.value_label.setter("text_size"))
+
+        value_row.add_widget(self.value_label)
+
+        left_layout.add_widget(title_label)
+        left_layout.add_widget(value_row)
+
+        # Graph widget
+        self.graph_widget = Widget(size_hint_y=0.80)
+        with self.graph_widget.canvas:
+            Color(126 / 255, 255 / 255, 236 / 255, 1)
+            self.graph_line = Line(width=dp(1.5))
+        self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
+
+        # Min/Max vertical layout aligned with graph
+        min_max_layout = BoxLayout(
+            orientation="vertical",
+            size_hint=(None, 1),
+            width=dp(150),
+            padding=(dp(50), 0, dp(50), dp(30)),
+        )
+        self.max_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(90),
+            halign="left",
+            valign="middle",
+        )
+        self.max_label.bind(size=self.max_label.setter("text_size"))
+
+        self.min_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(20),
+            halign="left",
+            valign="middle",
+        )
+        self.min_label.bind(size=self.min_label.setter("text_size"))
+
+        min_max_layout.add_widget(self.max_label)
+        min_max_layout.add_widget(self.min_label)
+        graph_layout = BoxLayout(
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+        )
+
+        # Set the graph widget to take less horizontal space
+        self.graph_widget.size_hint = (0.5, 1)
+
+        # Reorder: min/max comes first (on the left), then the graph
+        graph_layout.add_widget(min_max_layout)
+        graph_layout.add_widget(self.graph_widget)
+
+        # Add to content layout
+        content_layout.add_widget(left_layout)
+        content_layout.add_widget(graph_layout)
+
+        # Top-left Icon
+        self.icon = Image(
+            source="assets/co2.png",
+            size_hint=(None, None),
+            size=(dp(89), dp(87)),
+            pos_hint={"x": 0.01, "top": 0.95},
+        )
+        self.add_widget(self.icon)
+
+        # Data buffer
+        self.data_buffer = self.generate_waveform()
+        Clock.schedule_interval(self.update_data, 0.05)  # 20 FPS
+
+    def _update_bg_rect(self, *args):
+        self.bg_rect.size = self.size
+        self.bg_rect.pos = self.pos
+
+    def generate_waveform(self):
+        waveform = []
+
+        for cycle in range(10):  # 10 breaths
+            # Phase I – Baseline (0–5 mmHg)
+            for _ in range(4):
+                waveform.append(2)
+
+            # Phase II – Expiratory upstroke (5 → 35 mmHg)
+            for i in range(6):
+                val = 5 + i * 5  # 5, 10, ..., 30
+                waveform.append(val)
+
+            # Phase III – Alveolar plateau (35–45 mmHg)
+            for _ in range(10):
+                waveform.append(42)
+
+            # Phase 0 – Inspiratory downstroke (45 → 0 mmHg)
+            for i in range(4):
+                val = 42 - i * 10  # 42, 32, 22, 12
+                waveform.append(val)
+            for _ in range(2):
+                waveform.append(2)
+
+        return waveform
+
+    def update_data(self, dt):
+        # Scroll data
+        self.data_buffer = self.data_buffer[1:] + [self.data_buffer[0]]
+        new_val = int(self.data_buffer[-1])
+        self.value_label.text = str(new_val)
+        self.max_label.text = str(int(max(self.data_buffer)))
+        self.min_label.text = str(int(min(self.data_buffer)))
+        self.update_graph()
+
+    def update_graph(self, *args):
+        self.graph_widget.canvas.clear()
+        with self.graph_widget.canvas:
+            Color(126 / 255, 255 / 255, 236 / 255, 1)
+            width = self.graph_widget.width
+            height = self.graph_widget.height + dp(90)
+            x0 = self.graph_widget.x
+            y0 = self.graph_widget.y + dp(190)
+            baseline = y0 + height * 0.75  # higher baseline
+            amplitude = height * 0.25
+
+            n = len(self.data_buffer)
+            points = []
+            for i, val in enumerate(self.data_buffer):
+                x = x0 + i * (width / n)
+                y = baseline + ((val - 100) / 10) * amplitude
+                points.extend([x, y])
+
+            Line(points=points, width=dp(2))
+
+
+class SpO2Component(FloatLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint_y = None
+        self.height = dp(190)
+
+        # Background rectangle
+        with self.canvas.before:
+            Color(148 / 255, 155 / 255, 164 / 255, 0.20)
+            self.bg_rect = RoundedRectangle(
+                size=self.size, pos=self.pos, radius=[(28, 28)] * 4
+            )
+        self.bind(size=self._update_bg_rect, pos=self._update_bg_rect)
+
+        # Main horizontal content container
+        content_layout = BoxLayout(
+            orientation="horizontal",
+            spacing=dp(16),
+            padding=[dp(24), dp(16), dp(24), dp(224)],
+        )
+        self.add_widget(content_layout)
+
+        # Left section: text content
+        left_layout = BoxLayout(
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(160)
+        )
+        roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
+        title_label = Label(
+            text="[b]SPO2:[/b]",
+            markup=True,
+            size_hint=(None, None),
+            size=(dp(275), dp(200)),
+            color=(126 / 255, 255 / 255, 236 / 255, 1),
+            font_name=roboto_bold_path
+            if os.path.exists(roboto_bold_path)
+            else "Roboto",
+            font_size=14,
+            halign="left",
+            valign="middle",
+        )
+        title_label.bind(size=title_label.setter("text_size"))
+
+        value_row = BoxLayout(
+            orientation="horizontal", spacing=dp(8), size_hint=(1, None), height=dp(38)
+        )
+        self.value_label = Label(
+            text="98",
+            font_size=sp(72),
+            color=(1, 1, 1, 1),
+            size_hint=(None, None),
+            size=(dp(275), dp(130)),
+            halign="right",
+            valign="middle",
+        )
+        self.value_label.bind(size=self.value_label.setter("text_size"))
+
+        value_row.add_widget(self.value_label)
+
+        left_layout.add_widget(title_label)
+        left_layout.add_widget(value_row)
+
+        # Graph widget
+        self.graph_widget = Widget(size_hint_y=0.80)
+        with self.graph_widget.canvas:
+            Color(126 / 255, 255 / 255, 236 / 255, 1)
+            self.graph_line = Line(width=dp(1.5))
+        self.graph_widget.bind(size=self.update_graph, pos=self.update_graph)
+
+        # Min/Max vertical layout aligned with graph
+        min_max_layout = BoxLayout(
+            orientation="vertical",
+            size_hint=(None, 1),
+            width=dp(150),
+            padding=(dp(50), 0, dp(50), dp(30)),
+        )
+        self.max_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(90),
+            halign="left",
+            valign="middle",
+        )
+        self.max_label.bind(size=self.max_label.setter("text_size"))
+
+        self.min_label = Label(
+            text="--",
+            font_size=sp(16),
+            color=(0.7, 0.7, 0.7, 1),
+            size_hint=(1, None),
+            height=dp(20),
+            halign="left",
+            valign="middle",
+        )
+        self.min_label.bind(size=self.min_label.setter("text_size"))
+
+        min_max_layout.add_widget(self.max_label)
+        min_max_layout.add_widget(self.min_label)
+        graph_layout = BoxLayout(
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+        )
+
+        # Set the graph widget to take less horizontal space
+        self.graph_widget.size_hint = (0.5, 1)
+
+        # Reorder: min/max comes first (on the left), then the graph
+        graph_layout.add_widget(min_max_layout)
+        graph_layout.add_widget(self.graph_widget)
+
+        # Add to content layout
+        content_layout.add_widget(left_layout)
+        content_layout.add_widget(graph_layout)
+
+        # Top-left Icon
+        self.icon = Image(
+            source="assets/o2.png",
+            size_hint=(None, None),
+            size=(dp(89), dp(87)),
+            pos_hint={"x": 0.01, "top": 0.95},
+        )
+        self.add_widget(self.icon)
+
+        # Data buffer
+        self.data_buffer = self.generate_waveform()
+        Clock.schedule_interval(self.update_data, 0.05)  # 20 FPS
+
+    def _update_bg_rect(self, *args):
+        self.bg_rect.size = self.size
+        self.bg_rect.pos = self.pos
+
+    def generate_waveform(self):
+        # Emulate SpO2 waveform: smooth sine-like peaks
+        waveform = []
+        for i in range(200):
+            t = i / 20.0
+            y = math.sin(t * math.pi * 2) * 10  # sine wave
+            y += math.exp(-(((t % 1) * 10 - 5) ** 2) / 6) * 20  # pulse peak
+            waveform.append(95 + y)
+        return waveform
+
+    def update_data(self, dt):
+        # Scroll data
+        self.data_buffer = self.data_buffer[1:] + [self.data_buffer[0]]
+        new_val = int(self.data_buffer[-1])
+        self.value_label.text = str(new_val)
+        self.max_label.text = str(int(max(self.data_buffer)))
+        self.min_label.text = str(int(min(self.data_buffer)))
+        self.update_graph()
+
+    def update_graph(self, *args):
+        self.graph_widget.canvas.clear()
+        with self.graph_widget.canvas:
+            Color(126 / 255, 255 / 255, 236 / 255, 1)
+            width = self.graph_widget.width
+            height = self.graph_widget.height + dp(100)
+            x0 = self.graph_widget.x
+            y0 = self.graph_widget.y + dp(10)
+            baseline = y0 + height * 0.5
+            amplitude = height * 0.4
+
+            n = len(self.data_buffer)
+            points = []
+            for i, val in enumerate(self.data_buffer):
+                x = x0 + i * (width / n)
+                y = baseline + ((val - 100) / 10) * amplitude
+                points.extend([x, y])
+
+            Line(points=points, width=dp(2))
+
+
+class HeartRateComponent(FloatLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.size_hint_y = None
+        self.height = dp(190)
+
+        # Background rectangle
+        with self.canvas.before:
+            Color(148 / 255, 155 / 255, 164 / 255, 0.20)
+            self.bg_rect = RoundedRectangle(
+                size=self.size, pos=self.pos, radius=[(28, 28)] * 4
+            )
+        self.bind(size=self._update_bg_rect, pos=self._update_bg_rect)
+
+        # Main horizontal content container
+        content_layout = BoxLayout(
+            orientation="horizontal",
+            spacing=dp(16),
+            padding=[dp(24), dp(16), dp(24), dp(26)],
+        )
+        self.add_widget(content_layout)
+
+        # Left section: text content
+        left_layout = BoxLayout(
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(170)
         )
         roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
         title_label = Label(
