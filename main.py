@@ -7,7 +7,9 @@ from kivy.uix.image import Image
 from kivy.uix.button import Button
 from kivy.graphics import Color, Rectangle, Line, RoundedRectangle
 from kivy.clock import Clock
+from kivy.uix.button import ButtonBehavior
 from kivy.metrics import dp, sp
+
 import math
 import os
 import random
@@ -708,15 +710,6 @@ class HeartRateComponent(FloatLayout):
         self.update_graph()
 
 
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.image import Image
-from kivy.uix.button import ButtonBehavior
-from kivy.uix.label import Label
-from kivy.graphics import Color, RoundedRectangle, Line
-from kivy.metrics import dp
-from kivy.uix.widget import Widget
-
-
 # Make image behave like a button
 class ClickableImage(ButtonBehavior, Image):
     pass
@@ -734,30 +727,26 @@ class SidebarPanel(BoxLayout):
         self.bind(pos=self.update_graphics, size=self.update_graphics)
 
         # ===== Top: Caution Image =====
-        caution_image = Image(
-            source="assets/Group_8.png",
+        self.caution_image = Image(
+            source="assets/full.png",
             size_hint=(1, None),
             height=dp(250),
             allow_stretch=True,
             keep_ratio=True,
         )
-        self.add_widget(caution_image)
+        self.add_widget(self.caution_image)
 
         self.add_widget(Widget(size_hint_y=None, height=dp(10)))
 
         # ===== Status Section (White box) =====
-        status_section = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(15),size_hint_y=None,height=dp(236))
-        status_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
-
-        # ✅ Display image shown above status options
-        self.display_image = Image(
-            source="assets/full.png",  # Default displayed image
-            size_hint=(1, None),
-            height=dp(150),
-            allow_stretch=True,
-            keep_ratio=True,
+        status_section = BoxLayout(
+            orientation="vertical",
+            spacing=dp(10),
+            padding=dp(15),
+            size_hint_y=None,
+            height=dp(236),
         )
-        status_section.add_widget(self.display_image)
+        status_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
 
         # Status options: image button + label
         status_data = [
@@ -767,9 +756,20 @@ class SidebarPanel(BoxLayout):
         ]
 
         for icon_path, label_text, result_image in status_data:
-            row = BoxLayout(orientation="horizontal", spacing=dp(10), size_hint_y=None, height=dp(65))
-            btn = ClickableImage(source=icon_path, size_hint=(None, None), size=(dp(50), dp(50)))
-            btn.bind(on_press=lambda instance, path=result_image: self.update_display_image(path))
+            row = BoxLayout(
+                orientation="horizontal",
+                spacing=dp(10),
+                size_hint_y=None,
+                height=dp(65),
+            )
+            btn = ClickableImage(
+                source=icon_path, size_hint=(None, None), size=(dp(50), dp(50))
+            )
+            btn.bind(
+                on_press=lambda instance, path=result_image: self.update_display_image(
+                    path
+                )
+            )
 
             label = Label(
                 text=label_text,
@@ -788,7 +788,13 @@ class SidebarPanel(BoxLayout):
         self.add_widget(Widget(size_hint_y=None, height=dp(15)))
 
         # ===== Toggle Section (White box) =====
-        toggle_section = BoxLayout(orientation="vertical", spacing=dp(10), padding=dp(8),size_hint_y=None,height=dp(140))
+        toggle_section = BoxLayout(
+            orientation="vertical",
+            spacing=dp(10),
+            padding=dp(8),
+            size_hint_y=None,
+            height=dp(140),
+        )
         toggle_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
 
         toggle_section.add_widget(self.create_toggle("Saline"))
@@ -798,8 +804,8 @@ class SidebarPanel(BoxLayout):
         self.add_widget(Widget())  # Spacer
 
     def update_display_image(self, new_path):
-        self.display_image.source = new_path
-        self.display_image.reload()
+        self.caution_image.source = new_path
+        self.caution_image.reload()
 
     def create_toggle(self, label_text):
         layout = BoxLayout(
@@ -857,7 +863,10 @@ class SidebarPanel(BoxLayout):
             Color(148 / 255, 155 / 255, 164 / 255, 0.25)
             RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(28)])
             Color(245 / 255, 245 / 255, 245 / 255, 1)
-            Line(rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)), width=dp(1))
+            Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
+                width=dp(1),
+            )
 
     def draw_box_background(self, instance, value):
         instance.canvas.before.clear()
@@ -865,8 +874,16 @@ class SidebarPanel(BoxLayout):
             Color(1, 1, 1, 0.08)
             RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(20)])
             Color(1, 1, 1, 0.25)
-            Line(rounded_rectangle=(instance.x, instance.y, instance.width, instance.height, dp(20)), width=dp(1))
-
+            Line(
+                rounded_rectangle=(
+                    instance.x,
+                    instance.y,
+                    instance.width,
+                    instance.height,
+                    dp(20),
+                ),
+                width=dp(1),
+            )
 
 
 class ResponsiveStackApp(App):
@@ -874,6 +891,7 @@ class ResponsiveStackApp(App):
         # Configure window
         from kivy.config import Config
 
+        Config.set("graphics", "borderless", "1")
         Config.set("graphics", "width", "1280")
         Config.set("graphics", "height", "800")
         Config.set("graphics", "resizable", True)
