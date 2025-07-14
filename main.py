@@ -33,19 +33,20 @@ class RespiratoryComponent(FloatLayout):
         content_layout = BoxLayout(
             orientation="horizontal",
             spacing=dp(16),
-            padding=[dp(30), dp(16), dp(24), dp(620)],
+            padding=[dp(24), dp(16), dp(24), dp(620)],
         )
         self.add_widget(content_layout)
 
         # Left section: text content
         left_layout = BoxLayout(
-            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(160)
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(220)
         )
         roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
         title_label = Label(
             text="[b]Respiratory Rate(RR):[/b]",
             markup=True,
-            size_hint=(None, None),
+            size_hint=(1, None),
+            padding=[dp(80), dp(0), dp(0), dp(0)],
             size=(dp(275), dp(200)),
             color=(126 / 255, 255 / 255, 236 / 255, 1),
             font_name=roboto_bold_path
@@ -87,8 +88,8 @@ class RespiratoryComponent(FloatLayout):
         min_max_layout = BoxLayout(
             orientation="vertical",
             size_hint=(None, 1),
-            width=dp(150),
-            padding=(dp(50), 0, dp(50), dp(30)),
+            width=dp(120),
+            padding=(dp(20), 0, dp(50), dp(30)),
         )
         self.max_label = Label(
             text="--",
@@ -115,7 +116,7 @@ class RespiratoryComponent(FloatLayout):
         min_max_layout.add_widget(self.max_label)
         min_max_layout.add_widget(self.min_label)
         graph_layout = BoxLayout(
-            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(80), 0]
         )
 
         # Set the graph widget to take less horizontal space
@@ -213,13 +214,14 @@ class CO2Component(FloatLayout):
 
         # Left section: text content
         left_layout = BoxLayout(
-            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(160)
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(200)
         )
         roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
         title_label = Label(
             text="[b]ETC02:[/b]",
             markup=True,
-            size_hint=(None, None),
+            size_hint=(1, None),
+            padding=[dp(80), dp(0), dp(0), dp(0)],
             size=(dp(275), dp(200)),
             color=(126 / 255, 255 / 255, 236 / 255, 1),
             font_name=roboto_bold_path
@@ -262,7 +264,7 @@ class CO2Component(FloatLayout):
             orientation="vertical",
             size_hint=(None, 1),
             width=dp(150),
-            padding=(dp(50), 0, dp(50), dp(30)),
+            padding=(0, 0, dp(50), dp(30)),
         )
         self.max_label = Label(
             text="--",
@@ -289,7 +291,7 @@ class CO2Component(FloatLayout):
         min_max_layout.add_widget(self.max_label)
         min_max_layout.add_widget(self.min_label)
         graph_layout = BoxLayout(
-            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(80), 0]
         )
 
         # Set the graph widget to take less horizontal space
@@ -400,13 +402,14 @@ class SpO2Component(FloatLayout):
 
         # Left section: text content
         left_layout = BoxLayout(
-            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(160)
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(200)
         )
         roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
         title_label = Label(
             text="[b]SPO2:[/b]",
             markup=True,
-            size_hint=(None, None),
+            size_hint=(1, None),
+            padding=[dp(80), dp(0), dp(0), dp(0)],
             size=(dp(275), dp(200)),
             color=(126 / 255, 255 / 255, 236 / 255, 1),
             font_name=roboto_bold_path
@@ -449,7 +452,7 @@ class SpO2Component(FloatLayout):
             orientation="vertical",
             size_hint=(None, 1),
             width=dp(150),
-            padding=(dp(50), 0, dp(50), dp(30)),
+            padding=(0, 0, dp(50), dp(30)),
         )
         self.max_label = Label(
             text="--",
@@ -476,7 +479,7 @@ class SpO2Component(FloatLayout):
         min_max_layout.add_widget(self.max_label)
         min_max_layout.add_widget(self.min_label)
         graph_layout = BoxLayout(
-            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(80), 0]
         )
 
         # Set the graph widget to take less horizontal space
@@ -571,13 +574,14 @@ class HeartRateComponent(FloatLayout):
 
         # Left section: text content
         left_layout = BoxLayout(
-            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(170)
+            orientation="vertical", spacing=dp(4), size_hint_x=None, width=dp(200)
         )
         roboto_bold_path = os.path.join("assets", "Roboto-Bold.ttf")
         title_label = Label(
             text="[b]Heart rate (HR) :[/b]",
             markup=True,
-            size_hint=(None, None),
+            size_hint=(1, None),
+            padding=[dp(80), dp(0), dp(0), dp(0)],
             size=(dp(275), dp(200)),
             color=(126 / 255, 255 / 255, 236 / 255, 1),
             font_name=roboto_bold_path
@@ -620,7 +624,7 @@ class HeartRateComponent(FloatLayout):
             orientation="vertical",
             size_hint=(None, 1),
             width=dp(150),
-            padding=(dp(50), 0, dp(50), dp(30)),
+            padding=(dp(0), 0, dp(50), dp(30)),
         )
         self.max_label = Label(
             text="--",
@@ -647,7 +651,7 @@ class HeartRateComponent(FloatLayout):
         min_max_layout.add_widget(self.max_label)
         min_max_layout.add_widget(self.min_label)
         graph_layout = BoxLayout(
-            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(90), 0]
+            orientation="horizontal", spacing=dp(8), padding=[0, 0, dp(80), 0]
         )
 
         # Set the graph widget to take less horizontal space
