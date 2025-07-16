@@ -16,6 +16,54 @@ import math
 import os
 import random
 
+import RPi.GPIO as GPIO
+import time
+
+# Configuration
+BUZZER_PIN = 18
+
+# Initialize GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(BUZZER_PIN, GPIO.OUT)
+buzzer_pwm = GPIO.PWM(BUZZER_PIN, 1000)
+
+
+def full_blockage_alert():
+    """Buzzer for full blockage - 330 Hz for 0.3 seconds"""
+    buzzer_pwm.ChangeFrequency(330)
+    buzzer_pwm.start(50)
+    time.sleep(0.3)
+    buzzer_pwm.stop()
+
+
+def partial_blockage_alert():
+    """Buzzer for partial blockage - 440 Hz for 0.9 seconds"""
+    buzzer_pwm.ChangeFrequency(440)
+    buzzer_pwm.start(50)
+    time.sleep(0.9)
+    buzzer_pwm.stop()
+
+
+def cleanup():
+    """Clean up GPIO"""
+    GPIO.cleanup()
+
+
+try:
+    while True:
+        # Uncomment ONE of the following based on your use case:
+
+        # full_blockage_alert()
+        # time.sleep(0.3)  # interval between buzzes for full blockage
+
+        partial_blockage_alert()
+        time.sleep(0.9)  # interval between buzzes for partial blockage
+
+except KeyboardInterrupt:
+    print("Stopping buzzer and cleaning up GPIO...")
+    cleanup()
+
 
 class RespiratoryComponent(FloatLayout):
     def __init__(self, **kwargs):
@@ -831,6 +879,8 @@ class SidebarPanel(BoxLayout):
             blk.border_color = self.active_status
             blk.update_canvas()
 
+        self.buzzer_event = None
+
     def _upd_panel(self, *args):
         self._panel_bg.pos = self.pos
         self._panel_bg.size = self.size
@@ -930,6 +980,26 @@ class SidebarPanel(BoxLayout):
         self.active_status = bc
         self._set_caution_image(img_path)
         self.status_callback(label_text, img_path)
+
+        # 2) stop any previously scheduled buzzer calls
+        if self.buzzer_event:
+            Clock.unschedule(self.buzzer_event)
+            self.buzzer_event = None
+
+        # 3) start the new buzzer pattern
+        if label_text.startswith("Full"):
+            # schedule a beep every 0.6s (0.3s beep + 0.3s pause)
+            self.buzzer_event = Clock.schedule_interval(
+                lambda dt: full_blockage_alert(), 0.6
+            )
+        elif label_text.startswith("Partial"):
+            # schedule a beep every 1.8s (0.9s beep + 0.9s pause)
+            self.buzzer_event = Clock.schedule_interval(
+                lambda dt: partial_blockage_alert(), 1.8
+            )
+        else:
+            # "No blockage" — make sure buzzer is silent
+            cleanup()
 
     # ——— Two Toggles at Bottom ———
     def _build_toggle_card(self):
