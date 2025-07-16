@@ -1,6 +1,8 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.relativelayout import RelativeLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivy.uix.image import Image
@@ -719,175 +721,471 @@ class ClickableImage(ButtonBehavior, Image):
     pass
 
 
-class SidebarPanel(BoxLayout):
+class ColorBlock(ButtonBehavior, Widget):
+    def __init__(
+        self,
+        color=(1, 1, 1, 1),
+        border_color=None,
+        corner_radius=20,
+        border_width=1,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.color = color
+        self.border_color = border_color or color
+        self.corner_radius = corner_radius
+        self.border_width = border_width
+        self.bind(pos=self.update_canvas, size=self.update_canvas)
+        self.update_canvas()
+
+    def update_canvas(self, *args):
+        self.canvas.clear()
+        with self.canvas:
+            Color(*self.color)
+            RoundedRectangle(
+                pos=self.pos, size=self.size, radius=[dp(self.corner_radius)]
+            )
+            Color(*self.border_color)
+            Line(
+                rounded_rectangle=(
+                    self.x,
+                    self.y,
+                    self.width,
+                    self.height,
+                    dp(self.corner_radius),
+                ),
+                width=self.border_width,
+            )
+
+
+class SectionCard(BoxLayout):
+    """
+    A card with a light-gray rounded background and white border.
+    """
+
     def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        with self.canvas.before:
+            Color(148 / 255, 155 / 255, 164 / 255, 0.15)
+            self._bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(20)])
+            Color(245 / 255, 245 / 255, 245 / 255, 1)
+            self._border = Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(20)),
+                width=1,
+            )
+        self.bind(pos=self._update_bg, size=self._update_bg)
+
+    def _update_bg(self, *args):
+        self._bg.pos = self.pos
+        self._bg.size = self.size
+        self._border.rounded_rectangle = (
+            self.x,
+            self.y,
+            self.width,
+            self.height,
+            dp(20),
+        )
+
+
+class SidebarPanel(BoxLayout):
+    def __init__(self, status_callback=None, **kwargs):
         super().__init__(
             orientation="vertical",
-            size_hint=(0.35, 1),  # ✅ Dynamic width (adjust as needed)
-            spacing=dp(12),
+            spacing=dp(20),
             padding=dp(20),
+            size_hint=(None, 1),
+            width=dp(280),
             **kwargs,
         )
-        self.bind(pos=self.update_graphics, size=self.update_graphics)
 
-        # ===== Top: Caution Image =====
-        self.caution_image = Image(
-            source="assets/full.png",
-            size_hint=(1, None),
-            height=dp(250),
+        # panel background + border
+        with self.canvas.before:
+            Color(148 / 255, 155 / 255, 164 / 255, 0.25)
+            self._panel_bg = RoundedRectangle(
+                pos=self.pos, size=self.size, radius=[dp(28)]
+            )
+            Color(245 / 255, 245 / 255, 245 / 255, 1)
+            self._panel_border = Line(
+                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
+                width=1,
+            )
+        self.bind(pos=self._upd_panel, size=self._upd_panel)
+
+        # state & callback
+        self.status_callback = status_callback or (lambda label, path: None)
+        self.status_blocks = []
+        self.active_status = (0.30, 0.73, 0.15, 1)
+        self.current_image_path = "assets/no.png"
+        self.blink_event = None
+        self.blink_state = True
+
+        # build sections
+        self._build_caution_card()
+        self._build_status_card()
+        self._build_toggle_card()
+
+        # default highlight = "No blockage"
+        if self.status_blocks:
+            blk = self.status_blocks[2]
+            blk.color = self.active_status
+            blk.border_color = self.active_status
+            blk.update_canvas()
+
+    def _upd_panel(self, *args):
+        self._panel_bg.pos = self.pos
+        self._panel_bg.size = self.size
+        self._panel_border.rounded_rectangle = (
+            self.x,
+            self.y,
+            self.width,
+            self.height,
+            dp(28),
+        )
+
+    # ——— Caution Icon Section ———
+    def _build_caution_card(self):
+        card = SectionCard(size_hint=(1, None), height=dp(200))
+        rl = RelativeLayout()
+        img = Image(
+            source=self.current_image_path,
+            size_hint=(None, None),
+            size=(dp(156), dp(156)),
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
             allow_stretch=True,
             keep_ratio=True,
         )
-        self.add_widget(self.caution_image)
+        rl.add_widget(img)
+        card.add_widget(rl)
+        self._caution_image = img
+        self.add_widget(card)
 
-        self.add_widget(Widget(size_hint_y=None, height=dp(10)))
-
-        # ===== Status Section (White box) =====
-        status_section = BoxLayout(
+    # ——— Status Selection Section ———
+    def _build_status_card(self):
+        card = SectionCard(
             orientation="vertical",
-            spacing=dp(10),
-            padding=dp(15),
-            size_hint_y=None,
-            height=dp(236),
+            spacing=dp(20),
+            padding=[dp(40), dp(15), dp(15), dp(30)],
+            size_hint=(None, None),
+            height=dp(295),
+            width=dp(231),
         )
-        status_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
-
-        # Status options: image button + label
         status_data = [
-            ("assets/full_border.png", "Full\nBlockage", "assets/full.png"),
-            ("assets/partial_border.png", "Partial\nBlockage", "assets/partial.png"),
-            ("assets/no_border.png", "No\nBlockage", "assets/no.png"),
+            ("Full\nblockage", (0.78, 0.17, 0.17, 1), "assets/full.png"),
+            ("Partial\nblockage", (0.82, 0.73, 0.41, 1), "assets/partial.png"),
+            ("No\nblockage", (0.30, 0.73, 0.15, 1), "assets/no.png"),
         ]
-
-        for icon_path, label_text, result_image in status_data:
+        for text, col, img_path in status_data:
             row = BoxLayout(
                 orientation="horizontal",
                 spacing=dp(10),
                 size_hint_y=None,
                 height=dp(65),
             )
-            btn = ClickableImage(
-                source=icon_path, size_hint=(None, None), size=(dp(50), dp(50))
+            block = ColorBlock(
+                color=(0, 0, 0, 0),
+                border_color=col,
+                size_hint=(None, None),
+                size=(dp(73), dp(67)),
+                corner_radius=20,
             )
-            btn.bind(
-                on_press=lambda instance, path=result_image: self.update_display_image(
-                    path
-                )
+            block.bind(
+                on_press=lambda inst,
+                lt=text,
+                bc=col,
+                ip=img_path: self._on_status_press(inst, lt, bc, ip)
             )
+            self.status_blocks.append(block)
 
-            label = Label(
-                text=label_text,
+            lbl = Label(
+                text=text,
+                font_name="assets/Roboto-Bold.ttf",
                 font_size=dp(14),
                 color=(1, 1, 1, 1),
                 halign="left",
                 valign="middle",
             )
-            label.bind(size=label.setter("text_size"))
+            lbl.bind(size=lbl.setter("text_size"))
 
-            row.add_widget(btn)
-            row.add_widget(label)
-            status_section.add_widget(row)
+            row.add_widget(block)
+            row.add_widget(lbl)
+            card.add_widget(row)
 
-        self.add_widget(status_section)
-        self.add_widget(Widget(size_hint_y=None, height=dp(15)))
-
-        # ===== Toggle Section (White box) =====
-        toggle_section = BoxLayout(
-            orientation="vertical",
-            spacing=dp(10),
-            padding=dp(8),
-            size_hint_y=None,
-            height=dp(140),
+        # wrap in left-margin container
+        wrapper = BoxLayout(
+            orientation="horizontal", size_hint=(1, None), height=dp(295)
         )
-        toggle_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
+        wrapper.add_widget(Widget(size_hint_x=None, width=dp(5)))
+        wrapper.add_widget(card)
+        wrapper.add_widget(Widget(size_hint_x=None, height=dp(10)))
+        self.add_widget(wrapper)
 
-        toggle_section.add_widget(self.create_toggle("Saline"))
-        toggle_section.add_widget(self.create_toggle("Suction"))
-        self.add_widget(toggle_section)
+    def _on_status_press(self, inst, label_text, bc, img_path):
+        for b in self.status_blocks:
+            b.color = (0, 0, 0, 0)
+            b.border_color = b.border_color
+            b.update_canvas()
+        inst.color = bc
+        inst.border_color = bc
+        inst.update_canvas()
+        self.active_status = bc
+        self._set_caution_image(img_path)
+        self.status_callback(label_text, img_path)
 
-        self.add_widget(Widget())  # Spacer
-
-    def update_display_image(self, new_path):
-        self.caution_image.source = new_path
-        self.caution_image.reload()
-
-    def create_toggle(self, label_text):
-        layout = BoxLayout(
+    # ——— Two Toggles at Bottom ———
+    def _build_toggle_card(self):
+        container = BoxLayout(
             orientation="horizontal",
-            size_hint=(None, None),
-            size=(dp(225), dp(60)),
-            spacing=dp(10),
-            pos_hint={"center_x": 0.5},
-            padding=[dp(10), dp(10), dp(10), dp(10)],
+            spacing=dp(20),
+            size_hint=(1, None),
+            height=dp(183),
         )
-
-        label = Label(
-            text=f"{label_text}: OFF",
-            font_size=dp(14),
-            color=(1, 1, 1, 1),
-            halign="left",
-            valign="middle",
-        )
-        label.bind(size=label.setter("text_size"))
-
-        button = Button(
-            text="OFF",
-            size_hint=(None, None),
-            size=(dp(80), dp(40)),
-            background_normal="",
-            background_color=(0.5, 0.5, 0.5, 1),
-            color=(1, 1, 1, 1),
-        )
-
-        def toggle_state(instance):
-            if instance.text == "OFF":
-                instance.text = "ON"
-                instance.background_color = (0, 0.7, 0.3, 1)
-                label.text = f"{label_text}: ON"
-            else:
-                instance.text = "OFF"
-                instance.background_color = (0.5, 0.5, 0.5, 1)
-                label.text = f"{label_text}: OFF"
-
-        button.bind(on_press=toggle_state)
-
-        layout.add_widget(label)
-        layout.add_widget(button)
-        return layout
-
-    def update_graphics(self, *args):
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(0, 0, 0, 0.6)
-            RoundedRectangle(
-                pos=(self.x, self.y - dp(4)),
-                size=(self.width, self.height + dp(8)),
-                radius=[dp(28)],
+        for label_text in ("Suction", "Saline"):
+            card = SectionCard(
+                orientation="vertical",
+                spacing=dp(10),
+                padding=dp(16),
+                size_hint=(None, None),
+                width=dp(105),
+                height=dp(183),
             )
-            Color(148 / 255, 155 / 255, 164 / 255, 0.25)
-            RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(28)])
-            Color(245 / 255, 245 / 255, 245 / 255, 1)
-            Line(
-                rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
-                width=dp(1),
+            lbl = Label(
+                text=f"{label_text}\nOFF",
+                font_name="assets/Roboto-Bold.ttf",
+                font_size=dp(13),
+                color=(1, 1, 1, 0.8),
+                size_hint=(1, None),
+                height=dp(50),
+                halign="center",
+                valign="middle",
+            )
+            lbl.bind(size=lbl.setter("text_size"))
+
+            toggle = ColorBlock(
+                color=(0.2, 0.3, 0.2, 1),
+                border_color=(0.2, 0.3, 0.2, 1),
+                corner_radius=12,
+                size_hint=(None, None),
+                size=(dp(72), dp(35)),
+            )
+            toggle.bind(
+                on_press=lambda inst, lb=lbl, lt=label_text: self._toggle_switch(
+                    inst, lb, lt
+                )
             )
 
-    def draw_box_background(self, instance, value):
-        instance.canvas.before.clear()
-        with instance.canvas.before:
-            Color(1, 1, 1, 0.08)
-            RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(20)])
-            Color(1, 1, 1, 0.25)
-            Line(
-                rounded_rectangle=(
-                    instance.x,
-                    instance.y,
-                    instance.width,
-                    instance.height,
-                    dp(20),
-                ),
-                width=dp(1),
-            )
+            card.add_widget(lbl)
+            card.add_widget(toggle)
+            card.add_widget(Widget(size_hint_y=None, height=dp(15)))
+            container.add_widget(card)
+
+        # wrap in left-margin container
+        wrapper = BoxLayout(
+            orientation="horizontal", size_hint=(1, None), height=dp(183)
+        )
+        wrapper.add_widget(Widget(size_hint_x=None, width=dp(5)))
+        wrapper.add_widget(container)
+        wrapper.add_widget(Widget(size_hint_x=1))
+        self.add_widget(wrapper)
+
+    def _toggle_switch(self, inst, lbl, lt):
+        if lbl.text.endswith("OFF"):
+            inst.color = (0.23, 0.84, 0.07, 1)
+            inst.border_color = (0.23, 0.84, 0.07, 1)
+            lbl.text = f"{lt}\nON"
+        else:
+            inst.color = (0.2, 0.3, 0.2, 1)
+            inst.border_color = (0.2, 0.3, 0.2, 1)
+            lbl.text = f"{lt}\nOFF"
+        inst.update_canvas()
+
+    def _set_caution_image(self, path):
+        img = self._caution_image
+        img.source = path
+        img.opacity = 1
+        img.reload()
+        if self.blink_event:
+            self.blink_event.cancel()
+            self.blink_event = None
+        if "full" in path or "partial" in path:
+            self.blink_state = True
+            interval = 0.3 if "full" in path else 0.9
+            self.blink_event = Clock.schedule_interval(self._blink, interval)
+
+    def _blink(self, dt):
+        self.blink_state = not self.blink_state
+        self._caution_image.opacity = 1 if self.blink_state else 0
+
+
+# class SidebarPanel(BoxLayout):
+#     def __init__(self, **kwargs):
+#         super().__init__(
+#             orientation="vertical",
+#             size_hint=(0.3, 1),  # ✅ Dynamic width (adjust as needed)
+#             spacing=dp(10),
+#             padding=dp(40),
+#             **kwargs,
+#         )
+#         self.bind(pos=self.update_graphics, size=self.update_graphics)
+#
+#         # ===== Top: Caution Image =====
+#         self.caution_image = Image(
+#             source="assets/no.png",
+#             size_hint=(1, None),
+#             height=dp(200),
+#             allow_stretch=True,
+#             keep_ratio=True,
+#         )
+#         self.add_widget(self.caution_image)
+#
+#         self.add_widget(Widget(size_hint_y=None, height=dp(10)))
+#
+#         # ===== Status Section (White box) =====
+#         status_section = BoxLayout(
+#             orientation="vertical",
+#             spacing=dp(10),
+#             padding=dp(15),
+#             size_hint_y=None,
+#             height=dp(236),
+#         )
+#         status_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
+#
+#         # Status options: image button + label
+#         status_data = [
+#             ("assets/full_border.png", "Full\nBlockage", "assets/full.png"),
+#             ("assets/partial_border.png", "Partial\nBlockage", "assets/partial.png"),
+#             ("assets/no_border.png", "No\nBlockage", "assets/no.png"),
+#         ]
+#         colors = ["#C72B2B", "#D2BA69", "#4DBC27"]
+#
+#         for icon_path, label_text, result_image in status_data:
+#             row = BoxLayout(
+#                 orientation="horizontal",
+#                 spacing=dp(10),
+#                 size_hint_y=None,
+#                 height=dp(65),
+#             )
+#             btn = ClickableImage(
+#                 source=icon_path, size_hint=(None, None), size=(dp(50), dp(50))
+#             )
+#             btn.bind(
+#                 on_press=lambda instance, path=result_image: self.update_display_image(
+#                     path
+#                 )
+#             )
+#
+#             label = Label(
+#                 text=label_text,
+#                 font_size=dp(14),
+#                 color=(1, 1, 1, 1),
+#                 halign="left",
+#                 valign="middle",
+#             )
+#             label.bind(size=label.setter("text_size"))
+#
+#             row.add_widget(btn)
+#             row.add_widget(label)
+#             status_section.add_widget(row)
+#
+#         self.add_widget(status_section)
+#         self.add_widget(Widget(size_hint_y=None, height=dp(15)))
+#
+#         # ===== Toggle Section (White box) =====
+#         toggle_section = BoxLayout(
+#             orientation="vertical",
+#             spacing=dp(10),
+#             padding=dp(8),
+#             size_hint_y=None,
+#             height=dp(140),
+#         )
+#         toggle_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
+#
+#         toggle_section.add_widget(self.create_toggle("Saline"))
+#         toggle_section.add_widget(self.create_toggle("Suction"))
+#         self.add_widget(toggle_section)
+#
+#         self.add_widget(Widget())  # Spacer
+#
+#     def update_display_image(self, new_path):
+#         self.caution_image.source = new_path
+#         self.caution_image.reload()
+#
+#     def create_toggle(self, label_text):
+#         layout = BoxLayout(
+#             orientation="horizontal",
+#             size_hint=(None, None),
+#             size=(dp(225), dp(60)),
+#             spacing=dp(10),
+#             pos_hint={"center_x": 0.5},
+#             padding=[dp(10), dp(10), dp(10), dp(10)],
+#         )
+#
+#         label = Label(
+#             text=f"{label_text}: OFF",
+#             font_size=dp(14),
+#             color=(1, 1, 1, 1),
+#             halign="left",
+#             valign="middle",
+#         )
+#         label.bind(size=label.setter("text_size"))
+#
+#         button = Button(
+#             text="OFF",
+#             size_hint=(None, None),
+#             size=(dp(80), dp(40)),
+#             background_normal="",
+#             background_color=(0.5, 0.5, 0.5, 1),
+#             color=(1, 1, 1, 1),
+#         )
+#
+#         def toggle_state(instance):
+#             if instance.text == "OFF":
+#                 instance.text = "ON"
+#                 instance.background_color = (0, 0.7, 0.3, 1)
+#                 label.text = f"{label_text}: ON"
+#             else:
+#                 instance.text = "OFF"
+#                 instance.background_color = (0.5, 0.5, 0.5, 1)
+#                 label.text = f"{label_text}: OFF"
+#
+#         button.bind(on_press=toggle_state)
+#
+#         layout.add_widget(label)
+#         layout.add_widget(button)
+#         return layout
+#
+#     def update_graphics(self, *args):
+#         self.canvas.before.clear()
+#         with self.canvas.before:
+#             Color(0, 0, 0, 0.6)
+#             RoundedRectangle(
+#                 pos=(self.x, self.y - dp(4)),
+#                 size=(self.width, self.height + dp(8)),
+#                 radius=[dp(28)],
+#             )
+#             Color(148 / 255, 155 / 255, 164 / 255, 0.25)
+#             RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(28)])
+#             Color(245 / 255, 245 / 255, 245 / 255, 1)
+#             Line(
+#                 rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
+#                 width=dp(1),
+#             )
+#
+#     def draw_box_background(self, instance, value):
+#         instance.canvas.before.clear()
+#         with instance.canvas.before:
+#             Color(1, 1, 1, 0.08)
+#             RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(20)])
+#             Color(1, 1, 1, 0.25)
+#             Line(
+#                 rounded_rectangle=(
+#                     instance.x,
+#                     instance.y,
+#                     instance.width,
+#                     instance.height,
+#                     dp(20),
+#                 ),
+#                 width=dp(1),
+#             )
 
 
 class ResponsiveStackApp(App):
