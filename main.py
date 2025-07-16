@@ -2,11 +2,9 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.relativelayout import RelativeLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivy.uix.image import Image
-from kivy.uix.button import Button
 from kivy.graphics import Color, Rectangle, Line, RoundedRectangle
 from kivy.clock import Clock
 from kivy.uix.button import ButtonBehavior
@@ -17,7 +15,6 @@ import os
 import random
 
 import RPi.GPIO as GPIO
-import time
 
 # Configuration
 BUZZER_PIN = 18
@@ -29,40 +26,21 @@ GPIO.setup(BUZZER_PIN, GPIO.OUT)
 buzzer_pwm = GPIO.PWM(BUZZER_PIN, 1000)
 
 
-def full_blockage_alert():
-    """Buzzer for full blockage - 330 Hz for 0.3 seconds"""
-    buzzer_pwm.ChangeFrequency(330)
-    buzzer_pwm.start(50)
-    time.sleep(0.3)
-    buzzer_pwm.stop()
+def start_buzzer(freq, duty=50):
+    buzzer_pwm.ChangeFrequency(freq)
+    buzzer_pwm.start(duty)
 
 
-def partial_blockage_alert():
-    """Buzzer for partial blockage - 440 Hz for 0.9 seconds"""
-    buzzer_pwm.ChangeFrequency(440)
-    buzzer_pwm.start(50)
-    time.sleep(0.9)
+def stop_buzzer():
     buzzer_pwm.stop()
 
 
 def cleanup():
-    """Clean up GPIO"""
     GPIO.cleanup()
-
-
-try:
-    while True:
-        # Uncomment ONE of the following based on your use case:
-
-        # full_blockage_alert()
-        # time.sleep(0.3)  # interval between buzzes for full blockage
-
-        partial_blockage_alert()
-        time.sleep(0.9)  # interval between buzzes for partial blockage
-
-except KeyboardInterrupt:
-    print("Stopping buzzer and cleaning up GPIO...")
-    cleanup()
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    GPIO.setup(BUZZER_PIN, GPIO.OUT)
+    stop_buzzer()
 
 
 class RespiratoryComponent(FloatLayout):
@@ -858,6 +836,8 @@ class SidebarPanel(BoxLayout):
                 width=1,
             )
         self.bind(pos=self._upd_panel, size=self._upd_panel)
+        self.buzzer_event = None  # will hold the schedule interval
+        self._buzzer_stop_ev = None  # will hold the one-time stop callback
 
         # state & callback
         self.status_callback = status_callback or (lambda label, path: None)
@@ -981,25 +961,44 @@ class SidebarPanel(BoxLayout):
         self._set_caution_image(img_path)
         self.status_callback(label_text, img_path)
 
-        # 2) stop any previously scheduled buzzer calls
+        # cancel any existing buzzer schedules
         if self.buzzer_event:
             Clock.unschedule(self.buzzer_event)
             self.buzzer_event = None
+        if self._buzzer_stop_ev:
+            Clock.unschedule(self._buzzer_stop_ev)
+            self._buzzer_stop_ev = None
+        stop_buzzer()
 
-        # 3) start the new buzzer pattern
+        # start new pattern
         if label_text.startswith("Full"):
-            # schedule a beep every 0.6s (0.3s beep + 0.3s pause)
-            self.buzzer_event = Clock.schedule_interval(
-                lambda dt: full_blockage_alert(), 0.6
-            )
+            # every 0.6s, start a 0.3s 330Hz beep
+            self.buzzer_event = Clock.schedule_interval(self._full_cycle, 0.6)
+            # kick off the first immediately
+            self._full_cycle(0)
         elif label_text.startswith("Partial"):
-            # schedule a beep every 1.8s (0.9s beep + 0.9s pause)
-            self.buzzer_event = Clock.schedule_interval(
-                lambda dt: partial_blockage_alert(), 1.8
-            )
+            # every 1.8s, start a 0.9s 440Hz beep
+            self.buzzer_event = Clock.schedule_interval(self._partial_cycle, 1.8)
+            self._partial_cycle(0)
         else:
-            # "No blockage" — make sure buzzer is silent
-            cleanup()
+            # No blockage → ensure silent
+            # cleanup()
+            stop_buzzer()
+
+    def _full_cycle(self, dt):
+        # start 330Hz beep, then schedule its stop in 0.3s
+        start_buzzer(330)
+        # cancel any pending stop, then schedule a fresh one
+        if self._buzzer_stop_ev:
+            Clock.unschedule(self._buzzer_stop_ev)
+        self._buzzer_stop_ev = Clock.schedule_once(lambda dt: stop_buzzer(), 0.3)
+
+    def _partial_cycle(self, dt):
+        # start 440Hz beep, then stop in 0.9s
+        start_buzzer(440)
+        if self._buzzer_stop_ev:
+            Clock.unschedule(self._buzzer_stop_ev)
+        self._buzzer_stop_ev = Clock.schedule_once(lambda dt: stop_buzzer(), 0.9)
 
     # ——— Two Toggles at Bottom ———
     def _build_toggle_card(self):
