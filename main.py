@@ -183,7 +183,7 @@ class RespiratoryComponent(FloatLayout):
             for i in range(40):  # 40 samples per cycle (2 seconds at 20 FPS)
                 t = i / 40.0
                 # Smooth sinusoidal wave for breathing
-                val = 14 + math.sin(t * 2 * math.pi) * 4  # peak-to-peak: 16
+                val = 16 + math.sin(t * 2 * math.pi) * 4  # peak-to-peak: 16
                 waveform.append(val)
 
         return waveform
@@ -205,7 +205,7 @@ class RespiratoryComponent(FloatLayout):
             height = self.graph_widget.height + dp(120)
             x0 = self.graph_widget.x
             y0 = self.graph_widget.y + dp(420)
-            baseline = y0 + height * 0.5  # centered vertically
+            baseline = y0 + height * 0.4  # centered vertically
             amplitude = height * 0.4  # breathing wave needs large amplitude
 
             n = len(self.data_buffer)
@@ -350,29 +350,59 @@ class CO2Component(FloatLayout):
         self.bg_rect.size = self.size
         self.bg_rect.pos = self.pos
 
-    def generate_waveform(self):
+    def generate_waveform(
+        self,
+        cycles=10,
+        plateau_duration=30,
+        baseline_duration=10,
+        upstroke_duration=10,
+        downstroke_duration=8,
+    ):
+        """
+        Generate a normal ETCO2 capnograph waveform for a number of respiratory cycles with proportional durations for each phase.
+
+        Parameters:
+        - cycles: Number of respiratory cycles to simulate.
+        - plateau_duration: Duration of the alveolar plateau (Phase III) in terms of number of samples.
+        - baseline_duration: Duration of the baseline phase (Phase I) in terms of number of samples.
+        - upstroke_duration: Duration of the expiratory upstroke phase (Phase II) in terms of number of samples.
+        - downstroke_duration: Duration of the inspiratory downstroke phase (Phase IV) in terms of number of samples.
+
+        Returns:
+        - A list representing the ETCO2 waveform (in mmHg).
+        """
         waveform = []
 
-        for cycle in range(10):  # 10 breaths
-            # Phase I – Baseline (0–5 mmHg)
-            for _ in range(4):
-                waveform.append(2)
+        for cycle in range(cycles):  # Each cycle represents one breath
+            # Phase I – Baseline (0-5 mmHg)
+            for _ in range(baseline_duration):  # Baseline duration adjustable
+                waveform.append(2)  # Low CO2 level during baseline (0–5 mmHg)
 
             # Phase II – Expiratory upstroke (5 → 35 mmHg)
-            for i in range(6):
-                val = 5 + i * 5  # 5, 10, ..., 30
+            for i in range(
+                upstroke_duration
+            ):  # Exhalation increase from 5 mmHg to 35 mmHg
+                val = 5 + (
+                    i * (30 / upstroke_duration)
+                )  # Gradual increase in CO2 concentration
                 waveform.append(val)
 
-            # Phase III – Alveolar plateau (35–45 mmHg)
-            for _ in range(10):
-                waveform.append(42)
+            # Phase III – Alveolar plateau (35–45 mmHg) – Now with adjustable duration
+            plateau_value = (
+                40  # Alveolar plateau typically around 40 mmHg, can vary between 35-45
+            )
+            for _ in range(plateau_duration):  # Extended plateau phase
+                waveform.append(plateau_value)  # Constant value for alveolar CO2
 
-            # Phase 0 – Inspiratory downstroke (45 → 0 mmHg)
-            for i in range(4):
-                val = 42 - i * 10  # 42, 32, 22, 12
+            # Phase IV – Inspiratory downstroke (45 → 0 mmHg)
+            for i in range(
+                downstroke_duration
+            ):  # Rapid decrease in CO2 as inspiration begins
+                val = 45 - (i * (45 / downstroke_duration))  # Drop from 45 to baseline
                 waveform.append(val)
-            for _ in range(2):
-                waveform.append(2)
+
+            for _ in range(baseline_duration):  # Return to baseline
+                waveform.append(2)  # Small return to the baseline CO2 level
 
         return waveform
 
@@ -532,7 +562,7 @@ class SpO2Component(FloatLayout):
 
         # Data buffer
         self.data_buffer = self.generate_waveform()
-        Clock.schedule_interval(self.update_data, 0.05)  # 20 FPS
+        Clock.schedule_interval(self.update_data, 0.5)  # 20 FPS
 
     def _update_bg_rect(self, *args):
         self.bg_rect.size = self.size
@@ -543,9 +573,9 @@ class SpO2Component(FloatLayout):
         waveform = []
         for i in range(200):
             t = i / 20.0
-            y = math.sin(t * math.pi * 2) * 10  # sine wave
-            y += math.exp(-(((t % 1) * 10 - 5) ** 2) / 6) * 20  # pulse peak
-            waveform.append(95 + y)
+            y = math.sin(t * math.pi * 2) * 2  # sine wave
+            y += math.exp(-(((t % 1) * 10 - 5) ** 2) / 6) * 5  # pulse peak
+            waveform.append(94 + y)
         return waveform
 
     def update_data(self, dt):
@@ -565,8 +595,8 @@ class SpO2Component(FloatLayout):
             height = self.graph_widget.height + dp(100)
             x0 = self.graph_widget.x
             y0 = self.graph_widget.y + dp(10)
-            baseline = y0 + height * 0.5
-            amplitude = height * 0.4
+            baseline = y0 + height * 1
+            amplitude = height * 1.2
 
             n = len(self.data_buffer)
             points = []
@@ -703,7 +733,7 @@ class HeartRateComponent(FloatLayout):
         self.add_widget(self.icon)
 
         # Data buffer for dynamic waveform
-        self.data_buffer = [random.randint(90, 110) for _ in range(60)]
+        self.data_buffer = [random.randint(80, 100) for _ in range(60)]
         self.max_val = max(self.data_buffer)
         self.min_val = min(self.data_buffer)
 
@@ -719,7 +749,7 @@ class HeartRateComponent(FloatLayout):
         x0 = self.graph_widget.x
         y0 = self.graph_widget.y
         points = []
-        baseline = y0 + height * 0.5
+        baseline = y0 + height * 0.8
         amplitude = height * 0.35
 
         n = len(self.data_buffer)
@@ -730,7 +760,7 @@ class HeartRateComponent(FloatLayout):
         self.graph_line.points = points
 
     def update_data(self, dt):
-        new_value = 95 + random.randint(-5, 8)
+        new_value = 85 + random.randint(-5, 8)
         self.data_buffer.append(new_value)
         if len(self.data_buffer) > 30:
             self.data_buffer.pop(0)
@@ -1083,178 +1113,6 @@ class SidebarPanel(BoxLayout):
     def _blink(self, dt):
         self.blink_state = not self.blink_state
         self._caution_image.opacity = 1 if self.blink_state else 0
-
-
-# class SidebarPanel(BoxLayout):
-#     def __init__(self, **kwargs):
-#         super().__init__(
-#             orientation="vertical",
-#             size_hint=(0.3, 1),  # ✅ Dynamic width (adjust as needed)
-#             spacing=dp(10),
-#             padding=dp(40),
-#             **kwargs,
-#         )
-#         self.bind(pos=self.update_graphics, size=self.update_graphics)
-#
-#         # ===== Top: Caution Image =====
-#         self.caution_image = Image(
-#             source="assets/no.png",
-#             size_hint=(1, None),
-#             height=dp(200),
-#             allow_stretch=True,
-#             keep_ratio=True,
-#         )
-#         self.add_widget(self.caution_image)
-#
-#         self.add_widget(Widget(size_hint_y=None, height=dp(10)))
-#
-#         # ===== Status Section (White box) =====
-#         status_section = BoxLayout(
-#             orientation="vertical",
-#             spacing=dp(10),
-#             padding=dp(15),
-#             size_hint_y=None,
-#             height=dp(236),
-#         )
-#         status_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
-#
-#         # Status options: image button + label
-#         status_data = [
-#             ("assets/full_border.png", "Full\nBlockage", "assets/full.png"),
-#             ("assets/partial_border.png", "Partial\nBlockage", "assets/partial.png"),
-#             ("assets/no_border.png", "No\nBlockage", "assets/no.png"),
-#         ]
-#         colors = ["#C72B2B", "#D2BA69", "#4DBC27"]
-#
-#         for icon_path, label_text, result_image in status_data:
-#             row = BoxLayout(
-#                 orientation="horizontal",
-#                 spacing=dp(10),
-#                 size_hint_y=None,
-#                 height=dp(65),
-#             )
-#             btn = ClickableImage(
-#                 source=icon_path, size_hint=(None, None), size=(dp(50), dp(50))
-#             )
-#             btn.bind(
-#                 on_press=lambda instance, path=result_image: self.update_display_image(
-#                     path
-#                 )
-#             )
-#
-#             label = Label(
-#                 text=label_text,
-#                 font_size=dp(14),
-#                 color=(1, 1, 1, 1),
-#                 halign="left",
-#                 valign="middle",
-#             )
-#             label.bind(size=label.setter("text_size"))
-#
-#             row.add_widget(btn)
-#             row.add_widget(label)
-#             status_section.add_widget(row)
-#
-#         self.add_widget(status_section)
-#         self.add_widget(Widget(size_hint_y=None, height=dp(15)))
-#
-#         # ===== Toggle Section (White box) =====
-#         toggle_section = BoxLayout(
-#             orientation="vertical",
-#             spacing=dp(10),
-#             padding=dp(8),
-#             size_hint_y=None,
-#             height=dp(140),
-#         )
-#         toggle_section.bind(pos=self.draw_box_background, size=self.draw_box_background)
-#
-#         toggle_section.add_widget(self.create_toggle("Saline"))
-#         toggle_section.add_widget(self.create_toggle("Suction"))
-#         self.add_widget(toggle_section)
-#
-#         self.add_widget(Widget())  # Spacer
-#
-#     def update_display_image(self, new_path):
-#         self.caution_image.source = new_path
-#         self.caution_image.reload()
-#
-#     def create_toggle(self, label_text):
-#         layout = BoxLayout(
-#             orientation="horizontal",
-#             size_hint=(None, None),
-#             size=(dp(225), dp(60)),
-#             spacing=dp(10),
-#             pos_hint={"center_x": 0.5},
-#             padding=[dp(10), dp(10), dp(10), dp(10)],
-#         )
-#
-#         label = Label(
-#             text=f"{label_text}: OFF",
-#             font_size=dp(14),
-#             color=(1, 1, 1, 1),
-#             halign="left",
-#             valign="middle",
-#         )
-#         label.bind(size=label.setter("text_size"))
-#
-#         button = Button(
-#             text="OFF",
-#             size_hint=(None, None),
-#             size=(dp(80), dp(40)),
-#             background_normal="",
-#             background_color=(0.5, 0.5, 0.5, 1),
-#             color=(1, 1, 1, 1),
-#         )
-#
-#         def toggle_state(instance):
-#             if instance.text == "OFF":
-#                 instance.text = "ON"
-#                 instance.background_color = (0, 0.7, 0.3, 1)
-#                 label.text = f"{label_text}: ON"
-#             else:
-#                 instance.text = "OFF"
-#                 instance.background_color = (0.5, 0.5, 0.5, 1)
-#                 label.text = f"{label_text}: OFF"
-#
-#         button.bind(on_press=toggle_state)
-#
-#         layout.add_widget(label)
-#         layout.add_widget(button)
-#         return layout
-#
-#     def update_graphics(self, *args):
-#         self.canvas.before.clear()
-#         with self.canvas.before:
-#             Color(0, 0, 0, 0.6)
-#             RoundedRectangle(
-#                 pos=(self.x, self.y - dp(4)),
-#                 size=(self.width, self.height + dp(8)),
-#                 radius=[dp(28)],
-#             )
-#             Color(148 / 255, 155 / 255, 164 / 255, 0.25)
-#             RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(28)])
-#             Color(245 / 255, 245 / 255, 245 / 255, 1)
-#             Line(
-#                 rounded_rectangle=(self.x, self.y, self.width, self.height, dp(28)),
-#                 width=dp(1),
-#             )
-#
-#     def draw_box_background(self, instance, value):
-#         instance.canvas.before.clear()
-#         with instance.canvas.before:
-#             Color(1, 1, 1, 0.08)
-#             RoundedRectangle(pos=instance.pos, size=instance.size, radius=[dp(20)])
-#             Color(1, 1, 1, 0.25)
-#             Line(
-#                 rounded_rectangle=(
-#                     instance.x,
-#                     instance.y,
-#                     instance.width,
-#                     instance.height,
-#                     dp(20),
-#                 ),
-#                 width=dp(1),
-#             )
 
 
 class ResponsiveStackApp(App):
