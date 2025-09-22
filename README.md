@@ -1,10 +1,19 @@
 ﻿# Tracheostomy Device UI
 
-The Tracheostomy-Device-UI is a Raspberry Pi-based application designed for monitoring and detecting tracheostomy tube blockages. It provides real-time data on respiratory rate (RR), CO2, SpO2, and heart rate (HR), with integrated blockage detection and buzzer alerts.
+[![Python](https://img.shields.io/badge/Python-3776AB?&logo=python&logoColor=white)](https://www.python.org/)
+[![RaspberryPI](https://img.shields.io/badge/Raspberry%20Pi-A22846?&logo=Raspberry%20Pi&logoColor=white)](https://www.raspberrypi.org/)
+
+
+- [Tracheostomy Device UI](#tracheostomy-device-ui)
+  - [Features](#features)
+  - [Requirements](#requirements)
+  - [GPIO Control](#gpio-control)
+  - [DEMO](#demo)
+
+The Tracheostomy-Device-UI built with Kivy optimized for touch devices, runs on a Raspberry Pi. UI is designed for monitoring and detecting tracheostomy tube blockages. This UI simulates real-time data on respiratory rate (RR), CO2, SpO2, and heart rate (HR), with integrated blockage detection and buzzer alerts.
 
 <p align="center"> <img alt="IVD UI" src="assets/readme/UI.png" width="480"></p>
 <p align="center"> <img alt="IVD DEMO" src="assets/readme/DEMO.png" width="480"></p>
-
 
 ## Features
 
